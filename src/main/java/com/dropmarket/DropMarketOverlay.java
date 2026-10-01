@@ -41,7 +41,7 @@ class DropMarketOverlay extends Overlay
 		MarketPainter.paint(graphics, size.width, size.height, plugin.getTitle(), plugin.getGraph(),
 			plugin.getPolyGraph(), config, plugin.isResolved(), plugin.getTicks(),
 			FontManager.getRunescapeBoldFont(), FontManager.getRunescapeSmallFont(), plugin.getBadgeText(),
-			plugin.isBadgeSkull(), plugin.getVolumePop(), plugin.getResolvedDelta(), plugin.getResolvedDelta2());
+			plugin.isBadgeSkull(), plugin.getVolumePop(), plugin.getDisplayDelta(), plugin.getDisplayDelta2());
 		return size;
 	}
 }

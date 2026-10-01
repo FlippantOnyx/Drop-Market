@@ -157,11 +157,12 @@ public class DropMarketPlugin extends Plugin
 
 	// The % gained at the moment of victory, frozen until the market resets (the graph itself keeps
 	// pinning to 100 every tick afterward, which would otherwise wash the delta back down to 0).
-	@Getter
 	private int resolvedDelta;
-
-	@Getter
 	private int resolvedDelta2;
+	// The delta should never read 0% - when a step happens not to move the line, keep showing the last
+	// change that did move it rather than flashing a flat "0%".
+	private int liveDelta = 1;
+	private int liveDelta2 = 1;
 
 	private final Random random = new Random();
 	private long volumePop;
@@ -233,6 +234,8 @@ public class DropMarketPlugin extends Plugin
 		resolved = false;
 		resolvedDelta = 0;
 		resolvedDelta2 = 0;
+		liveDelta = 1;
+		liveDelta2 = 1;
 		personalOverride = false;
 		volumePop = 0;
 		volumePopTick = -VOLUME_POP_TICKS - 1;
@@ -330,6 +333,11 @@ public class DropMarketPlugin extends Plugin
 			else
 			{
 				graph.step();
+				int d = (int) Math.round(graph.current() - graph.previous());
+				if (d != 0)
+				{
+					liveDelta = d;
+				}
 			}
 		}
 		if (ticks % UPDATE_TICKS == 0 && ticks - volumePopTick > VOLUME_POP_TICKS
@@ -349,6 +357,11 @@ public class DropMarketPlugin extends Plugin
 			else
 			{
 				polyGraph.step();
+				int d2 = (int) Math.round(polyGraph.current() - polyGraph.previous());
+				if (d2 != 0)
+				{
+					liveDelta2 = d2;
+				}
 			}
 		}
 	}
@@ -822,13 +835,18 @@ public class DropMarketPlugin extends Plugin
 	{
 		String picked = MarketPicker.pick(table, DropTables.isPetFirst(source), config.minimumDropValue(),
 			this::priceOf, item -> isLockedSlot(item, fromWiki));
-		if (!DropTables.isPetFirst(source))
+		if (DropTables.isPetFirst(source))
 		{
-			String pet = DropTables.findPet(table);
-			if (pet != null && !pet.equals(picked) && random.nextDouble() < PET_FEATURE_CHANCE)
-			{
-				return pet;
-			}
+			// A pure skilling/minigame pet market (e.g. Woodcutting: just "Beaver") has nothing else to
+			// chase once the pet's logged, which would otherwise go quiet to LIVE ODDS forever. This is a
+			// simulated ticker, not real collection log tracking, so keep showing the pet regardless.
+			return picked != null ? picked : DropTables.findPet(table);
+		}
+
+		String pet = DropTables.findPet(table);
+		if (pet != null && !pet.equals(picked) && random.nextDouble() < PET_FEATURE_CHANCE)
+		{
+			return pet;
 		}
 		return picked;
 	}
@@ -989,6 +1007,17 @@ public class DropMarketPlugin extends Plugin
 	long getVolumePop()
 	{
 		return ticks - volumePopTick <= VOLUME_POP_TICKS ? volumePop : 0;
+	}
+
+	/** Never 0% - frozen at the win once resolved, else the last change that actually moved the line. */
+	int getDisplayDelta()
+	{
+		return resolved ? resolvedDelta : liveDelta;
+	}
+
+	int getDisplayDelta2()
+	{
+		return resolved ? resolvedDelta2 : liveDelta2;
 	}
 
 	private void updateBadge()

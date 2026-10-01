@@ -45,7 +45,8 @@ final class MarketPainter
 
 	static void paint(Graphics2D graphics, int w, int h, String title, MarketGraph graph, Color lineColor,
 		boolean resolved, long now, Font titleFont, Font smallFont, String badge, boolean badgeSkull,
-		boolean showKalshiBar, boolean showPolymarketBar, MarketGraph polyGraph, long volumePop)
+		boolean showKalshiBar, boolean showPolymarketBar, MarketGraph polyGraph, long volumePop,
+		boolean showDualLine, String kalshiBarText, String polymarketBarText)
 	{
 		Graphics2D g = (Graphics2D) graphics.create();
 		try
@@ -68,14 +69,20 @@ final class MarketPainter
 			{
 				g.setColor(POLY_BLUE);
 				g.fillRect(0, y, w, BRAND_BAR_H);
-				drawPolymarketBrand(g, w, y, BRAND_BAR_H);
+				if (polymarketBarText != null && !polymarketBarText.isEmpty())
+				{
+					drawCenteredBrandText(g, polymarketBarText, w, y, BRAND_BAR_H, Color.WHITE);
+				}
 				y += BRAND_BAR_H;
 			}
 			if (showKalshiBar)
 			{
 				g.setColor(DropMarketConfig.KALSHI_GREEN);
 				g.fillRect(0, y, w, BRAND_BAR_H);
-				drawCenteredBrandText(g, "KALSHI", w, y, BRAND_BAR_H, Color.BLACK);
+				if (kalshiBarText != null && !kalshiBarText.isEmpty())
+				{
+					drawCenteredBrandText(g, kalshiBarText, w, y, BRAND_BAR_H, Color.BLACK);
+				}
 				y += BRAND_BAR_H;
 			}
 
@@ -137,19 +144,18 @@ final class MarketPainter
 			int delta = (int) Math.round(graph.current() - graph.previous());
 			if (delta != 0)
 			{
-				Color c = delta > 0 ? UP : DOWN;
 				String deltaText = Math.abs(delta) + "%";
-				Font deltaFont = smallFont.deriveFont(smallFont.getSize2D() * 1.15f);
+				Font deltaFont = smallFont.deriveFont(Font.BOLD, smallFont.getSize2D() * 1.15f);
 				FontMetrics deltaFm = g.getFontMetrics(deltaFont);
 				int triW = 7;
 				int mid = y - deltaFm.getAscent() / 2;
 				Polygon tri = delta > 0
 					? new Polygon(new int[]{x, x + triW, x + triW / 2}, new int[]{mid + 3, mid + 3, mid - 3}, 3)
 					: new Polygon(new int[]{x, x + triW, x + triW / 2}, new int[]{mid - 3, mid - 3, mid + 3}, 3);
-				g.setColor(c);
+				g.setColor(accent);
 				g.fill(tri);
 				g.setFont(deltaFont);
-				text(g, deltaText, x + triW + 4, y, c);
+				text(g, deltaText, x + triW + 4, y, accent);
 			}
 			y += bigFm.getDescent();
 			g.setFont(smallFont);
@@ -162,7 +168,7 @@ final class MarketPainter
 			int chartBottom = h - PAD - footerH - smallFm.getAscent() / 2;
 			if (chartBottom - chartTop >= 10 && chartRight - chartLeft >= 20)
 			{
-				drawChart(g, graph, polyGraph, accent, chartLeft, chartTop, chartRight, chartBottom, smallFm, now);
+				drawChart(g, graph, showDualLine && polyGraph != null ? polyGraph : null, accent, chartLeft, chartTop, chartRight, chartBottom, smallFm, now);
 			}
 
 			int footY = h - PAD;

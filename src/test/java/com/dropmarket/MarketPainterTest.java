@@ -30,7 +30,8 @@ public class MarketPainterTest
 		BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
 		Graphics2D g = img.createGraphics();
 		MarketPainter.paint(g, w, h, title, graph, DropMarketConfig.KALSHI_GREEN, resolved, now,
-			FontManager.getRunescapeBoldFont(), FontManager.getRunescapeSmallFont(), "3 KC", true, false, false, null, 0);
+			FontManager.getRunescapeBoldFont(), FontManager.getRunescapeSmallFont(), "3 KC", true, false, false, null, 0,
+			false, "", "");
 		g.dispose();
 		return img;
 	}
@@ -96,7 +97,8 @@ public class MarketPainterTest
 		BufferedImage img = new BufferedImage(W, H, BufferedImage.TYPE_INT_ARGB);
 		Graphics2D g = img.createGraphics();
 		MarketPainter.paint(g, W, H, "Zulrah drops Tanzanite fang", graph, DropMarketConfig.KALSHI_GREEN, false, 0,
-			FontManager.getRunescapeBoldFont(), FontManager.getRunescapeSmallFont(), "0:42", false, true, true, poly, 1_400_000L);
+			FontManager.getRunescapeBoldFont(), FontManager.getRunescapeSmallFont(), "0:42", false, true, true, poly, 1_400_000L,
+			true, "Kalshi Odds", "Polymarket Odds");
 		g.dispose();
 		save(img, "brand-bars");
 		assertTrue(containsColor(img, DropMarketConfig.KALSHI_GREEN));

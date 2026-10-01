@@ -93,4 +93,37 @@ public interface DropMarketConfig extends Config
 	{
 		return true;
 	}
+
+	@ConfigItem(
+		keyName = "showDualLine",
+		name = "Show dual line",
+		description = "Display a second independent price line below the main line",
+		position = 8
+	)
+	default boolean showDualLine()
+	{
+		return true;
+	}
+
+	@ConfigItem(
+		keyName = "kalshiBarText",
+		name = "Kalshi bar text",
+		description = "Custom text to display in the Kalshi bar (leave blank for no text)",
+		position = 9
+	)
+	default String kalshiBarText()
+	{
+		return "";
+	}
+
+	@ConfigItem(
+		keyName = "polymarketBarText",
+		name = "Polymarket bar text",
+		description = "Custom text to display in the Polymarket bar (leave blank for no text)",
+		position = 10
+	)
+	default String polymarketBarText()
+	{
+		return "";
+	}
 }

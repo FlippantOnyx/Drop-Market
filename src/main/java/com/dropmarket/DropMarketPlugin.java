@@ -67,8 +67,8 @@ public class DropMarketPlugin extends Plugin
 	private static final int POLY_PHASE = 2;
 	private static final int IDLE_TICKS = 50;
 	private static final int CELEBRATION_TICKS = 100;
-	private static final int VOLUME_POP_TICKS = 5;
-	private static final double VOLUME_POP_CHANCE = 0.2;
+	private static final int VOLUME_POP_TICKS = 8;
+	private static final double VOLUME_POP_CHANCE = 0.3;
 	private static final long VOLUME_POP_MIN = 100_000L;
 	private static final long VOLUME_POP_MAX = 2_147_483_647L;
 	// Clue steps involve a lot of running around, so the clue market outlives normal idling.

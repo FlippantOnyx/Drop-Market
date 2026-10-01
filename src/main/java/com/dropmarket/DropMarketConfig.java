@@ -9,17 +9,31 @@ import net.runelite.client.config.ConfigItem;
 public interface DropMarketConfig extends Config
 {
 	String GROUP = "dropmarket";
-	Color KALSHI_GREEN = new Color(0x00D991);
+	Color DEFAULT_LINE_COLOR = new Color(0x00D991);
+	Color DEFAULT_LINE2_COLOR = new Color(0x3D7BFF);
+	Color DEFAULT_BAR1_COLOR = new Color(0x1652F0);
+	Color DEFAULT_BAR2_COLOR = new Color(0x00D991);
 
 	@ConfigItem(
 		keyName = "graphColor",
-		name = "Graph color",
-		description = "Color of the odds line",
+		name = "Line 1 color",
+		description = "Color of the main odds line",
 		position = 1
 	)
 	default Color graphColor()
 	{
-		return KALSHI_GREEN;
+		return DEFAULT_LINE_COLOR;
+	}
+
+	@ConfigItem(
+		keyName = "line2Color",
+		name = "Line 2 color",
+		description = "Color of the second, independent odds line",
+		position = 2
+	)
+	default Color line2Color()
+	{
+		return DEFAULT_LINE2_COLOR;
 	}
 
 	@ConfigItem(
@@ -28,7 +42,7 @@ public interface DropMarketConfig extends Config
 		description = "One per line as 'Source: Item' to bet on that item instead of the most expensive drop.<br>"
 			+ "e.g. 'Chambers of Xeric: Dexterous prayer scroll' or 'Zulrah: Serpentine visage'.<br>"
 			+ "Raids also accept CoX / ToB / ToA.",
-		position = 2
+		position = 3
 	)
 	default String priorityItems()
 	{
@@ -40,7 +54,7 @@ public interface DropMarketConfig extends Config
 		name = "Minimum drop value",
 		description = "Monsters whose best tradeable drop is worth less than this show LIVE ODDS,<br>"
 			+ "unless they drop an untradeable collection log item you haven't unlocked yet",
-		position = 3
+		position = 4
 	)
 	default int minimumDropValue()
 	{
@@ -53,7 +67,7 @@ public interface DropMarketConfig extends Config
 		description = "Read your collection log from RuneProfile (requires the RuneProfile plugin to have synced it).<br>"
 			+ "Without this, unlocks are learned by browsing your collection log in-game.",
 		warning = "This feature submits your IP address to a 3rd-party server not controlled or verified by RuneLite developers",
-		position = 4
+		position = 5
 	)
 	default boolean runeProfileSync()
 	{
@@ -65,7 +79,7 @@ public interface DropMarketConfig extends Config
 		name = "OSRS Wiki drop tables",
 		description = "Look up drop tables on the OSRS Wiki for monsters that aren't built into the plugin",
 		warning = "This feature submits your IP address to a 3rd-party server not controlled or verified by RuneLite developers",
-		position = 5
+		position = 6
 	)
 	default boolean wikiLookup()
 	{
@@ -73,23 +87,23 @@ public interface DropMarketConfig extends Config
 	}
 
 	@ConfigItem(
-		keyName = "showKalshiBar",
-		name = "Show Kalshi bar",
-		description = "Show a Kalshi-branded bar across the top of the overlay",
-		position = 6
+		keyName = "showBar1",
+		name = "Show bar 1",
+		description = "Show the top colored bar across the top of the overlay",
+		position = 7
 	)
-	default boolean showKalshiBar()
+	default boolean showBar1()
 	{
 		return true;
 	}
 
 	@ConfigItem(
-		keyName = "showPolymarketBar",
-		name = "Show Polymarket bar",
-		description = "Show a Polymarket-branded bar across the top of the overlay",
-		position = 7
+		keyName = "showBar2",
+		name = "Show bar 2",
+		description = "Show the second colored bar across the top of the overlay",
+		position = 8
 	)
-	default boolean showPolymarketBar()
+	default boolean showBar2()
 	{
 		return true;
 	}
@@ -97,8 +111,8 @@ public interface DropMarketConfig extends Config
 	@ConfigItem(
 		keyName = "showDualLine",
 		name = "Show dual line",
-		description = "Display a second independent price line below the main line",
-		position = 8
+		description = "Display a second independent price line alongside the main line",
+		position = 9
 	)
 	default boolean showDualLine()
 	{
@@ -106,23 +120,67 @@ public interface DropMarketConfig extends Config
 	}
 
 	@ConfigItem(
-		keyName = "kalshiBarText",
-		name = "Kalshi bar text",
-		description = "Custom text to display in the Kalshi bar (leave blank for no text)",
-		position = 9
+		keyName = "bar1Color",
+		name = "Bar 1 color",
+		description = "Color of the top bar",
+		position = 10
 	)
-	default String kalshiBarText()
+	default Color bar1Color()
+	{
+		return DEFAULT_BAR1_COLOR;
+	}
+
+	@ConfigItem(
+		keyName = "bar2Color",
+		name = "Bar 2 color",
+		description = "Color of the second bar",
+		position = 11
+	)
+	default Color bar2Color()
+	{
+		return DEFAULT_BAR2_COLOR;
+	}
+
+	@ConfigItem(
+		keyName = "bar1TextColor",
+		name = "Bar 1 text color",
+		description = "Color of the text displayed in the top bar",
+		position = 12
+	)
+	default Color bar1TextColor()
+	{
+		return Color.WHITE;
+	}
+
+	@ConfigItem(
+		keyName = "bar2TextColor",
+		name = "Bar 2 text color",
+		description = "Color of the text displayed in the second bar",
+		position = 13
+	)
+	default Color bar2TextColor()
+	{
+		return Color.BLACK;
+	}
+
+	@ConfigItem(
+		keyName = "bar1Text",
+		name = "Bar 1 text",
+		description = "Custom text to display in the top bar (leave blank for no text)",
+		position = 14
+	)
+	default String bar1Text()
 	{
 		return "";
 	}
 
 	@ConfigItem(
-		keyName = "polymarketBarText",
-		name = "Polymarket bar text",
-		description = "Custom text to display in the Polymarket bar (leave blank for no text)",
-		position = 10
+		keyName = "bar2Text",
+		name = "Bar 2 text",
+		description = "Custom text to display in the second bar (leave blank for no text)",
+		position = 15
 	)
-	default String polymarketBarText()
+	default String bar2Text()
 	{
 		return "";
 	}

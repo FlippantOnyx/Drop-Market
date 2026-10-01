@@ -24,34 +24,33 @@ final class MarketPainter
 	private static final Color GRID = new Color(255, 255, 255, 45);
 	private static final Color MUTED = new Color(150, 156, 166);
 	private static final Color TITLE = new Color(235, 237, 240);
-	private static final Color UP = new Color(0x2ECC71);
-	private static final Color DOWN = new Color(0xE5484D);
 	private static final Color LIVE_RED = new Color(0xFF3B5C);
 	private static final Color EYE = new Color(20, 20, 24);
-	private static final Color POLY_BLUE = new Color(0x1652F0);
-	private static final Color POLY_LINE = new Color(0x3D7BFF);
-	private static final Font BRAND_FONT = new Font(Font.SANS_SERIF, Font.BOLD, 10);
+	private static final Font BAR_TEXT_FONT = new Font(Font.SANS_SERIF, Font.BOLD, 10);
 	private static final Stroke GRID_STROKE = new BasicStroke(1f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER,
 		10f, new float[]{2f, 3f}, 0f);
 	private static final Stroke LINE_STROKE = new BasicStroke(1.6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
 	private static final int PAD = 6;
-	private static final int FLASH_MS = 400;
-	private static final int PULSE_MS = 1400;
+	// All animation here steps once per game tick (0.6s) rather than wall-clock time, so it stays in lockstep
+	// with everything else OSRS does on the tick.
+	private static final int FLASH_PERIOD_TICKS = 2;
+	private static final int DOT_PERIOD_TICKS = 1;
+	private static final int PULSE_PERIOD_TICKS = 3;
 	private static final int BRAND_BAR_H = 14;
 
 	private MarketPainter()
 	{
 	}
 
-	static void paint(Graphics2D graphics, int w, int h, String title, MarketGraph graph, Color lineColor,
-		boolean resolved, long now, Font titleFont, Font smallFont, String badge, boolean badgeSkull,
-		boolean showKalshiBar, boolean showPolymarketBar, MarketGraph polyGraph, long volumePop,
-		boolean showDualLine, String kalshiBarText, String polymarketBarText)
+	static void paint(Graphics2D graphics, int w, int h, String title, MarketGraph graph, MarketGraph polyGraph,
+		DropMarketConfig config, boolean resolved, long nowTick, Font titleFont, Font smallFont, String badge,
+		boolean badgeSkull, long volumePop, int resolvedDelta)
 	{
 		Graphics2D g = (Graphics2D) graphics.create();
 		try
 		{
-			boolean flashOn = resolved && (now / FLASH_MS) % 2 == 0;
+			boolean flashOn = resolved && (nowTick / FLASH_PERIOD_TICKS) % 2 == 0;
+			Color lineColor = config.graphColor();
 			Color accent = flashOn ? RAID_PURPLE : lineColor;
 
 			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -65,23 +64,23 @@ final class MarketPainter
 			}
 
 			int y = 0;
-			if (showPolymarketBar)
+			if (config.showBar1())
 			{
-				g.setColor(POLY_BLUE);
+				g.setColor(config.bar1Color());
 				g.fillRect(0, y, w, BRAND_BAR_H);
-				if (polymarketBarText != null && !polymarketBarText.isEmpty())
+				if (config.bar1Text() != null && !config.bar1Text().isEmpty())
 				{
-					drawCenteredBrandText(g, polymarketBarText, w, y, BRAND_BAR_H, Color.WHITE);
+					drawBarText(g, config.bar1Text(), w, y, BRAND_BAR_H, config.bar1TextColor());
 				}
 				y += BRAND_BAR_H;
 			}
-			if (showKalshiBar)
+			if (config.showBar2())
 			{
-				g.setColor(DropMarketConfig.KALSHI_GREEN);
+				g.setColor(config.bar2Color());
 				g.fillRect(0, y, w, BRAND_BAR_H);
-				if (kalshiBarText != null && !kalshiBarText.isEmpty())
+				if (config.bar2Text() != null && !config.bar2Text().isEmpty())
 				{
-					drawCenteredBrandText(g, kalshiBarText, w, y, BRAND_BAR_H, Color.BLACK);
+					drawBarText(g, config.bar2Text(), w, y, BRAND_BAR_H, config.bar2TextColor());
 				}
 				y += BRAND_BAR_H;
 			}
@@ -98,7 +97,7 @@ final class MarketPainter
 			y += PAD;
 			int liveBaseline = y + smallFm.getAscent();
 			int lx = PAD;
-			boolean dotOn = (now / 600) % 2 == 0;
+			boolean dotOn = (nowTick / DOT_PERIOD_TICKS) % 2 == 0;
 			int dotR = 3;
 			g.setFont(smallFont.deriveFont(Font.BOLD));
 			FontMetrics liveFm = g.getFontMetrics();
@@ -118,7 +117,7 @@ final class MarketPainter
 				lx += smallFm.stringWidth("·") + 6;
 				if (badgeSkull)
 				{
-					drawSkull(g, lx, liveBaseline + 1, skullSize, MUTED);
+					drawSkull(g, lx, (int) Math.round(dotCenterY + skullSize / 2.0), skullSize, MUTED);
 					lx += skullSize + 3;
 				}
 				text(g, badge, lx, liveBaseline, MUTED);
@@ -141,7 +140,7 @@ final class MarketPainter
 			text(g, pctText, PAD, y, accent);
 			int x = PAD + bigFm.stringWidth(pctText) + 10;
 
-			int delta = (int) Math.round(graph.current() - graph.previous());
+			int delta = resolved ? resolvedDelta : (int) Math.round(graph.current() - graph.previous());
 			if (delta != 0)
 			{
 				String deltaText = Math.abs(delta) + "%";
@@ -168,7 +167,9 @@ final class MarketPainter
 			int chartBottom = h - PAD - footerH - smallFm.getAscent() / 2;
 			if (chartBottom - chartTop >= 10 && chartRight - chartLeft >= 20)
 			{
-				drawChart(g, graph, showDualLine && polyGraph != null ? polyGraph : null, accent, chartLeft, chartTop, chartRight, chartBottom, smallFm, now);
+				MarketGraph secondLine = config.showDualLine() ? polyGraph : null;
+				drawChart(g, graph, secondLine, accent, config.line2Color(), chartLeft, chartTop, chartRight,
+					chartBottom, smallFm, nowTick);
 			}
 
 			int footY = h - PAD;
@@ -198,40 +199,16 @@ final class MarketPainter
 		}
 	}
 
-	private static void drawCenteredBrandText(Graphics2D g, String s, int w, int barTop, int barH, Color color)
+	private static void drawBarText(Graphics2D g, String s, int w, int barTop, int barH, Color color)
 	{
 		Font old = g.getFont();
-		g.setFont(BRAND_FONT);
+		g.setFont(BAR_TEXT_FONT);
 		FontMetrics fm = g.getFontMetrics();
 		int tx = (w - fm.stringWidth(s)) / 2;
 		int ty = barTop + (barH + fm.getAscent() - fm.getDescent()) / 2;
 		g.setColor(color);
 		g.drawString(s, tx, ty);
 		g.setFont(old);
-	}
-
-	private static void drawPolymarketBrand(Graphics2D g, int w, int barTop, int barH)
-	{
-		Font old = g.getFont();
-		g.setFont(BRAND_FONT);
-		FontMetrics fm = g.getFontMetrics();
-		String s = "Polymarket";
-		int logoSize = barH - 6;
-		int totalW = logoSize + 4 + fm.stringWidth(s);
-		int x = (w - totalW) / 2;
-		int ty = barTop + (barH + fm.getAscent() - fm.getDescent()) / 2;
-		int logoY = barTop + (barH - logoSize) / 2;
-		g.setColor(Color.WHITE);
-		drawBowtie(g, x, logoY, logoSize);
-		g.drawString(s, x + logoSize + 4, ty);
-		g.setFont(old);
-	}
-
-	private static void drawBowtie(Graphics2D g, int x, int y, int size)
-	{
-		int half = size / 2;
-		g.fill(new Polygon(new int[]{x, x, x + half}, new int[]{y, y + size, y + half}, 3));
-		g.fill(new Polygon(new int[]{x + size, x + size, x + half}, new int[]{y, y + size, y + half}, 3));
 	}
 
 	private static void drawSkull(Graphics2D g, int x, int baselineY, int size, Color color)
@@ -249,8 +226,8 @@ final class MarketPainter
 			(int) Math.max(1, Math.round(size * 0.2)));
 	}
 
-	private static void drawChart(Graphics2D g, MarketGraph graph, MarketGraph polyGraph, Color color, int left, int top, int right,
-		int bottom, FontMetrics smallFm, long now)
+	private static void drawChart(Graphics2D g, MarketGraph graph, MarketGraph secondLine, Color color,
+		Color secondColor, int left, int top, int right, int bottom, FontMetrics smallFm, long nowTick)
 	{
 		g.setStroke(GRID_STROKE);
 		int labelGap = smallFm.getAscent() + 1;
@@ -267,15 +244,15 @@ final class MarketPainter
 			}
 		}
 
-		if (polyGraph != null)
+		if (secondLine != null)
 		{
-			drawLine(g, polyGraph, POLY_LINE, left, top, right, bottom, false, now);
+			drawLine(g, secondLine, secondColor, left, top, right, bottom, nowTick);
 		}
-		drawLine(g, graph, color, left, top, right, bottom, true, now);
+		drawLine(g, graph, color, left, top, right, bottom, nowTick);
 	}
 
 	private static void drawLine(Graphics2D g, MarketGraph graph, Color color, int left, int top, int right,
-		int bottom, boolean primary, long now)
+		int bottom, long nowTick)
 	{
 		int n = graph.size();
 		if (n < 2)
@@ -302,21 +279,18 @@ final class MarketPainter
 			lastY = py;
 		}
 
-		if (primary)
-		{
-			Path2D.Double area = new Path2D.Double(line);
-			area.lineTo(right, bottom);
-			area.lineTo(left, bottom);
-			area.closePath();
-			g.setPaint(new GradientPaint(0, top, withAlpha(color, 70), 0, bottom, withAlpha(color, 0)));
-			g.fill(area);
-		}
+		Path2D.Double area = new Path2D.Double(line);
+		area.lineTo(right, bottom);
+		area.lineTo(left, bottom);
+		area.closePath();
+		g.setPaint(new GradientPaint(0, top, withAlpha(color, 70), 0, bottom, withAlpha(color, 0)));
+		g.fill(area);
 
 		g.setStroke(LINE_STROKE);
 		g.setColor(color);
 		g.draw(line);
 
-		double pulse = (now % PULSE_MS) / (double) PULSE_MS;
+		double pulse = (nowTick % PULSE_PERIOD_TICKS) / (double) PULSE_PERIOD_TICKS;
 		double haloR = 3 + 5 * pulse;
 		g.setColor(withAlpha(color, (int) (130 * (1 - pulse))));
 		g.fill(new Ellipse2D.Double(lastX - haloR, lastY - haloR, haloR * 2, haloR * 2));

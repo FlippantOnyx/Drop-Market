@@ -56,7 +56,7 @@ import net.runelite.http.api.item.ItemPrice;
 @PluginDescriptor(
 	name = "Drop Market",
 	description = "A tiny prediction-market graph betting on your next big drop",
-	tags = {"drop", "loot", "odds", "graph", "kalshi", "polymarket", "raids", "fun"}
+	tags = {"drop", "loot", "odds", "graph", "market", "raids", "fun"}
 )
 public class DropMarketPlugin extends Plugin
 {
@@ -66,6 +66,8 @@ public class DropMarketPlugin extends Plugin
 	private static final int UPDATE_TICKS = 5;
 	private static final int POLY_PHASE = 2;
 	private static final int IDLE_TICKS = 50;
+	// Rock/tree respawns and moving between fishing spots leave bigger gaps than combat idling does.
+	private static final int SKILL_IDLE_TICKS = 150;
 	private static final int CELEBRATION_TICKS = 100;
 	private static final int VOLUME_POP_TICKS = 8;
 	private static final double VOLUME_POP_CHANCE = 0.3;
@@ -150,6 +152,11 @@ public class DropMarketPlugin extends Plugin
 	@Getter
 	private boolean badgeSkull;
 
+	// The % gained at the moment of victory, frozen until the market resets (the graph itself keeps
+	// pinning to 100 every tick afterward, which would otherwise wash the delta back down to 0).
+	@Getter
+	private int resolvedDelta;
+
 	private final Random random = new Random();
 	private long volumePop;
 	private int volumePopTick;
@@ -157,6 +164,7 @@ public class DropMarketPlugin extends Plugin
 	private final Map<String, Integer> killCounts = new HashMap<>();
 	private final Map<String, Integer> skillCounts = new HashMap<>();
 	private Map<String, String> priorities = Collections.emptyMap();
+	@Getter
 	private int ticks;
 	private int loginTick;
 	private int lastCombatTick;
@@ -198,7 +206,7 @@ public class DropMarketPlugin extends Plugin
 		skillCounts.clear();
 		lastCombatTick = -IDLE_TICKS - 1;
 		lastNotableTick = -IDLE_TICKS - 1;
-		lastSkillTick = -IDLE_TICKS - 1;
+		lastSkillTick = -SKILL_IDLE_TICKS - 1;
 		lastHunterXpTick = -1;
 		lastHerbloreXpTick = -1;
 		targetSource = null;
@@ -217,6 +225,7 @@ public class DropMarketPlugin extends Plugin
 		marketItem = null;
 		showingMarket = false;
 		resolved = false;
+		resolvedDelta = 0;
 		personalOverride = false;
 		volumePop = 0;
 		volumePopTick = -VOLUME_POP_TICKS - 1;
@@ -348,7 +357,7 @@ public class DropMarketPlugin extends Plugin
 		{
 			combat = targetSource;
 		}
-		boolean skilling = skillSource != null && ticks - lastSkillTick <= IDLE_TICKS;
+		boolean skilling = skillSource != null && ticks - lastSkillTick <= SKILL_IDLE_TICKS;
 		if (skilling && (combat == null || lastSkillTick > lastCombatTick))
 		{
 			return skillSource;
@@ -382,7 +391,7 @@ public class DropMarketPlugin extends Plugin
 			market = DropTables.HERBIBOAR;
 		}
 		else if (skill == Skill.HUNTER && DropTables.HERBIBOAR.equals(skillSource)
-			&& ticks - lastSkillTick <= IDLE_TICKS)
+			&& ticks - lastSkillTick <= SKILL_IDLE_TICKS)
 		{
 			market = DropTables.HERBIBOAR;
 		}
@@ -555,7 +564,10 @@ public class DropMarketPlugin extends Plugin
 		if (event.getName() != null)
 		{
 			String source = DropTables.canonicalSource(event.getName());
-			killCounts.merge(source, 1, Integer::sum);
+			if (DropTables.isCompletion(source, event.getName()))
+			{
+				killCounts.merge(source, 1, Integer::sum);
+			}
 			lastLootSource = source;
 			lastLootTick = ticks;
 			if (resolved && personalOverride && ticks - resolvedTick <= LOOT_SOURCE_TICKS)
@@ -887,6 +899,7 @@ public class DropMarketPlugin extends Plugin
 
 	private void resolve()
 	{
+		resolvedDelta = (int) Math.round(100 - graph.current());
 		resolved = true;
 		resolvedTick = ticks;
 		showingMarket = true;

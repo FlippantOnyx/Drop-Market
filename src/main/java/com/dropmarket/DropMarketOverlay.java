@@ -39,11 +39,9 @@ class DropMarketOverlay extends Overlay
 		}
 		Dimension size = getPreferredSize() != null ? getPreferredSize() : DEFAULT_SIZE;
 		MarketPainter.paint(graphics, size.width, size.height, plugin.getTitle(), plugin.getGraph(),
-			config.graphColor(), plugin.isResolved(), System.currentTimeMillis(),
+			plugin.getPolyGraph(), config, plugin.isResolved(), plugin.getTicks(),
 			FontManager.getRunescapeBoldFont(), FontManager.getRunescapeSmallFont(), plugin.getBadgeText(),
-			plugin.isBadgeSkull(), config.showKalshiBar(), config.showPolymarketBar(),
-			config.showKalshiBar() && config.showPolymarketBar() ? plugin.getPolyGraph() : null,
-			plugin.getVolumePop(), config.showDualLine(), config.kalshiBarText(), config.polymarketBarText());
+			plugin.isBadgeSkull(), plugin.getVolumePop(), plugin.getResolvedDelta());
 		return size;
 	}
 }

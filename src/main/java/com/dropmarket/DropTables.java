@@ -23,6 +23,11 @@ final class DropTables
 	static final String HERBIBOAR = "Herbiboar";
 	static final String TREASURE_TRAILS = "Treasure Trails";
 
+	// Raids only pay out their unique drops from the reward chest at the very end, so room/sub-boss kills
+	// (aliased to the raid name for market display) shouldn't bump the raid's completion count.
+	private static final Set<String> RAIDS = new HashSet<>(
+		Arrays.asList(CHAMBERS_OF_XERIC, THEATRE_OF_BLOOD, TOMBS_OF_AMASCUT));
+
 	private static final Map<String, List<String>> TABLES = new HashMap<>();
 	private static final Map<String, String> ALIASES = new HashMap<>();
 	private static final Set<String> PET_FIRST = new HashSet<>();
@@ -335,6 +340,16 @@ final class DropTables
 	{
 		String canonical = ALIASES.get(normalize(name));
 		return canonical != null ? canonical : name.trim();
+	}
+
+	/**
+	 * True once {@code rawName} is the actual completion event for {@code canonicalSource} — the raid's own
+	 * reward chest, or a non-raid source that doesn't alias away from its own name. False for a raid's
+	 * room/sub-boss kills, which only alias to the raid for market display, not for counting a completion.
+	 */
+	static boolean isCompletion(String canonicalSource, String rawName)
+	{
+		return !RAIDS.contains(canonicalSource) || normalize(canonicalSource).equals(normalize(rawName));
 	}
 
 	static List<String> lookup(String source)

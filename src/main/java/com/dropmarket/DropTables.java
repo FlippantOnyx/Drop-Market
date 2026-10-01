@@ -327,6 +327,19 @@ final class DropTables
 		return PETS.contains(normalize(item));
 	}
 
+	/** The pet in a drop table, if any - regardless of whether it's already been obtained. */
+	static String findPet(List<String> table)
+	{
+		for (String item : table)
+		{
+			if (isPet(item))
+			{
+				return item;
+			}
+		}
+		return null;
+	}
+
 	private static void alias(String source, String... aliases)
 	{
 		for (String a : aliases)

@@ -1,23 +1,20 @@
 # Drop Market
 
-A tiny prediction-market-style odds graph for your next big drop. The odds are completely made up and move every 5 ticks.
+A tiny, purely-for-fun overlay that turns your next big drop into a prediction-market-style odds graph. **The odds are completely made up** — this isn't tied to any real drop rates, trading, or gambling, it's just flavor for flexing on your clanmates while you grind.
 
-- Attacking a monster opens a market like **ZULRAH DROPS TANZANITE FANG**, picking the most valuable notable drop by GE price.
-- Inside Chambers of Xeric, Theatre of Blood, Tombs of Amascut, or the Gauntlet, the market is the raid or chest itself. Wintertodt, Tempoross, and Guardians of the Rift work the same way.
-- Chest-reward bosses (Gauntlet, Barrows, Moons of Peril, Colosseum, Fight Caves, Inferno) roll against the chest's loot, including their wave and prep monsters.
-- Training a skill with a pet opens that pet's market, e.g. **MINING DROPS ROCK GOLEM** or **WOODCUTTING DROPS BEAVER**. Skilling minigames bet on their pet by default.
-- Monsters only get a market if their best drop is worth at least 250k (configurable) or they drop an untradeable collection log item you haven't unlocked, like **GOBLIN DROPS GOBLIN CHAMPION SCROLL**. Otherwise it's **LIVE ODDS**.
-- While you're working a clue, it's **[YOU] GETS THIRD AGE**. Fighting an Armadylean or Bandosian guard switches it to **[YOU] GETS ARMADYLEAN HELMET**.
-- Collection log unlocks are learned by browsing your collection log in-game and from "New item added" messages. You can optionally pull your whole log from RuneProfile.
-- With no combat for ~30 seconds, the market goes to **LIVE ODDS**.
-- If you actually get the item, the line shoots to 100% and flashes raid purple for 1 minute or until you start killing something else.
+## How it works
+
+- Fighting a boss, running a raid, or training a skill opens a "market" for its best drop (e.g. **ZULRAH DROPS TANZANITE FANG**), with a little line that wanders up and down every few ticks.
+- Low-value or already-unlocked drops just show **LIVE ODDS** instead of picking a specific item.
+- Actually land the drop and the line rockets to 100%, flashing raid purple for a minute to celebrate.
+- Pets get a fair shot at being featured too, logged or not.
+- Idle for a while and it resets back to LIVE ODDS.
 
 ## Settings
 
-- **Line 1 / Line 2 color**: colors for the main odds line and the second, independent odds line.
-- **Priority drops**: one per line, e.g. `Chambers of Xeric: Dexterous prayer scroll` or `Zulrah: Serpentine visage`. `CoX`, `ToB`, and `ToA` work too.
-- **OSRS Wiki drop tables** (off by default): looks up drop tables for monsters that aren't built in.
-- **Show bar 1 / Show bar 2**: toggle the two colored bars across the top of the overlay, each with its own color, text color, and custom text.
-- **Show dual line**: toggle the second, independently-moving odds line on the chart.
+- Colors for both lines, both header bars, and their text
+- A second, independently-moving line and a second header bar, each optional
+- A list of priority items to bet on instead of the default pick
+- Optional RuneProfile sync and OSRS Wiki lookups for drop tables that aren't built in
 
-Alt-drag the bottom-right corner of the overlay to resize it.
+Alt-drag the bottom-right corner to resize the overlay.

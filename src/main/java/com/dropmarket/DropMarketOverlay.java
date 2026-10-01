@@ -43,7 +43,7 @@ class DropMarketOverlay extends Overlay
 			FontManager.getRunescapeBoldFont(), FontManager.getRunescapeSmallFont(), plugin.getBadgeText(),
 			plugin.isBadgeSkull(), config.showKalshiBar(), config.showPolymarketBar(),
 			config.showKalshiBar() && config.showPolymarketBar() ? plugin.getPolyGraph() : null,
-			plugin.getVolumePop());
+			plugin.getVolumePop(), config.showDualLine(), config.kalshiBarText(), config.polymarketBarText());
 		return size;
 	}
 }

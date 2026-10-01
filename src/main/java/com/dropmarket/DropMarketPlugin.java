@@ -71,6 +71,9 @@ public class DropMarketPlugin extends Plugin
 	private static final int CELEBRATION_TICKS = 100;
 	private static final int VOLUME_POP_TICKS = 8;
 	private static final double VOLUME_POP_CHANCE = 0.3;
+	// Rolled once per PvM kill/attempt: a flat shot at the market featuring the pet instead of the usual
+	// most-valuable drop, win or lose on the actual roll - and regardless of whether it's already obtained.
+	private static final double PET_FEATURE_CHANCE = 0.1;
 	private static final long VOLUME_POP_MIN = 100_000L;
 	private static final long VOLUME_POP_MAX = 2_147_483_647L;
 	// Clue steps involve a lot of running around, so the clue market outlives normal idling.
@@ -817,8 +820,17 @@ public class DropMarketPlugin extends Plugin
 
 	private String pickItem(String source, List<String> table, boolean fromWiki)
 	{
-		return MarketPicker.pick(table, DropTables.isPetFirst(source), config.minimumDropValue(), this::priceOf,
-			item -> isLockedSlot(item, fromWiki));
+		String picked = MarketPicker.pick(table, DropTables.isPetFirst(source), config.minimumDropValue(),
+			this::priceOf, item -> isLockedSlot(item, fromWiki));
+		if (!DropTables.isPetFirst(source))
+		{
+			String pet = DropTables.findPet(table);
+			if (pet != null && !pet.equals(picked) && random.nextDouble() < PET_FEATURE_CHANCE)
+			{
+				return pet;
+			}
+		}
+		return picked;
 	}
 
 	/** An untradeable collection log slot this account hasn't unlocked (clue scrolls never count). */

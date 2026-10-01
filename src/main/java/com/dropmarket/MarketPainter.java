@@ -203,7 +203,7 @@ final class MarketPainter
 		Font deltaFont = deltaFont(smallFont);
 		FontMetrics deltaFm = g.getFontMetrics(deltaFont);
 		int triW = 7;
-		int mid = y - deltaFm.getAscent() / 2;
+		int mid = y - deltaFm.getAscent() / 2 - 1;
 		int textX = x;
 		if (delta != 0)
 		{

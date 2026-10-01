@@ -10,18 +10,13 @@ final class MarketPicker
 	{
 	}
 
-	/**
-	 * An unobtained pet always wins, regardless of threshold - no valuable tradeable drop should ever shadow it
-	 * out of rotation. Otherwise: priciest drop over the threshold, else first locked untradeable slot
-	 * (pet-first: reversed), else null.
-	 */
+	/** Priciest drop over the threshold, else first locked untradeable slot (pet-first: reversed), else null. */
 	static String pick(List<String> table, boolean petFirst, long threshold, ToLongFunction<String> price,
 		Predicate<String> lockedSlot)
 	{
 		String bestTradeable = null;
 		long bestPrice = 0;
 		String chase = null;
-		String petChase = null;
 		for (String item : table)
 		{
 			long p = price.applyAsLong(item);
@@ -30,25 +25,10 @@ final class MarketPicker
 				bestTradeable = item;
 				bestPrice = p;
 			}
-			else if (p < 0 && lockedSlot.test(item))
+			else if (p < 0 && chase == null && lockedSlot.test(item))
 			{
-				if (DropTables.isPet(item))
-				{
-					if (petChase == null)
-					{
-						petChase = item;
-					}
-				}
-				else if (chase == null)
-				{
-					chase = item;
-				}
+				chase = item;
 			}
-		}
-
-		if (petChase != null)
-		{
-			return petChase;
 		}
 
 		boolean valuable = bestTradeable != null && bestPrice >= threshold;

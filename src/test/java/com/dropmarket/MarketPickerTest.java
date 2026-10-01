@@ -29,16 +29,9 @@ public class MarketPickerTest
 	}
 
 	@Test
-	public void valuableTradeableWinsWhenPetAlreadyObtained()
+	public void valuableTradeableWins()
 	{
 		assertEquals("Tanzanite fang",
-			pick(false, ImmutableSet.of(), "Tanzanite fang", "Magic fang", "Pet snakeling"));
-	}
-
-	@Test
-	public void unobtainedPetIsNeverExcludedByAValuableTradeable()
-	{
-		assertEquals("Pet snakeling",
 			pick(false, ImmutableSet.of("Pet snakeling"), "Tanzanite fang", "Magic fang", "Pet snakeling"));
 	}
 
@@ -65,16 +58,9 @@ public class MarketPickerTest
 	}
 
 	@Test
-	public void firstLockedSlotInTableOrderIsChosenWhenNoPetIsInPlay()
+	public void firstLockedSlotInTableOrderIsChosen()
 	{
-		assertEquals("Goblin champion scroll",
-			pick(false, ImmutableSet.of("Goblin champion scroll", "Black mask"), "Goblin champion scroll", "Black mask"));
-	}
-
-	@Test
-	public void unobtainedPetWinsOverOtherLockedSlotsRegardlessOfTableOrder()
-	{
-		assertEquals("Tzrek-jad",
+		assertEquals("Fire cape",
 			pick(false, ImmutableSet.of("Fire cape", "Tzrek-jad"), "Fire cape", "Tzrek-jad"));
 		assertEquals("Tzrek-jad", pick(false, ImmutableSet.of("Tzrek-jad"), "Fire cape", "Tzrek-jad"));
 	}

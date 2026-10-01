@@ -32,6 +32,14 @@ public class DropTablesTest
 	}
 
 	@Test
+	public void findPetLocatesThePetRegardlessOfPosition()
+	{
+		assertEquals("Beaver", DropTables.findPet(DropTables.lookup("Woodcutting")));
+		assertEquals("Olmlet", DropTables.findPet(DropTables.lookup(DropTables.CHAMBERS_OF_XERIC)));
+		assertNull(DropTables.findPet(DropTables.lookup("Abyssal demon")));
+	}
+
+	@Test
 	public void lookupIsCaseInsensitive()
 	{
 		assertNotNull(DropTables.lookup("zulrah"));

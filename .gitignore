@@ -10,3 +10,10 @@ nbproject/
 *.class
 /drop-market/
 overlay-preview.png
+
+# Never commit SSH/credential material accidentally dropped in the project folder.
+id_rsa
+id_ed25519
+*.pem
+*.ppk
+macbookkey*

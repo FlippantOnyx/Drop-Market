@@ -17,7 +17,94 @@ public class MarketPainterTest
 	private static final int W = DropMarketOverlay.DEFAULT_SIZE.width;
 	private static final int H = DropMarketOverlay.DEFAULT_SIZE.height;
 
-	private static BufferedImage render(String title, boolean resolved, long now, int w, int h) throws Exception
+	private static final class TestConfig implements DropMarketConfig
+	{
+		Color graphColor = DEFAULT_LINE_COLOR;
+		Color line2Color = DEFAULT_LINE2_COLOR;
+		boolean showBar1;
+		boolean showBar2;
+		boolean showDualLine;
+		Color bar1Color = DEFAULT_BAR1_COLOR;
+		Color bar2Color = DEFAULT_BAR2_COLOR;
+		Color bar1TextColor = Color.WHITE;
+		Color bar2TextColor = Color.BLACK;
+		String bar1Text = "";
+		String bar2Text = "";
+
+		@Override
+		public Color graphColor()
+		{
+			return graphColor;
+		}
+
+		@Override
+		public Color line2Color()
+		{
+			return line2Color;
+		}
+
+		@Override
+		public boolean showBar1()
+		{
+			return showBar1;
+		}
+
+		@Override
+		public boolean showBar2()
+		{
+			return showBar2;
+		}
+
+		@Override
+		public boolean showDualLine()
+		{
+			return showDualLine;
+		}
+
+		@Override
+		public Color bar1Color()
+		{
+			return bar1Color;
+		}
+
+		@Override
+		public Color bar2Color()
+		{
+			return bar2Color;
+		}
+
+		@Override
+		public Color bar1TextColor()
+		{
+			return bar1TextColor;
+		}
+
+		@Override
+		public Color bar2TextColor()
+		{
+			return bar2TextColor;
+		}
+
+		@Override
+		public String bar1Text()
+		{
+			return bar1Text;
+		}
+
+		@Override
+		public String bar2Text()
+		{
+			return bar2Text;
+		}
+	}
+
+	private static BufferedImage render(String title, boolean resolved, long nowTick, int w, int h) throws Exception
+	{
+		return render(title, resolved, nowTick, w, h, new TestConfig(), null, 0);
+	}
+
+	private static BufferedImage render(String title, boolean resolved, long nowTick, int w, int h,
+		TestConfig config, MarketGraph polyGraph, long volumePop) throws Exception
 	{
 		MarketGraph graph = new MarketGraph(new Random(1234));
 		graph.reset();
@@ -29,9 +116,8 @@ public class MarketPainterTest
 
 		BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
 		Graphics2D g = img.createGraphics();
-		MarketPainter.paint(g, w, h, title, graph, DropMarketConfig.KALSHI_GREEN, resolved, now,
-			FontManager.getRunescapeBoldFont(), FontManager.getRunescapeSmallFont(), "3 KC", true, false, false, null, 0,
-			false, "", "");
+		MarketPainter.paint(g, w, h, title, graph, polyGraph, config, resolved, nowTick,
+			FontManager.getRunescapeBoldFont(), FontManager.getRunescapeSmallFont(), "3 KC", true, volumePop, 12);
 		g.dispose();
 		return img;
 	}
@@ -64,14 +150,14 @@ public class MarketPainterTest
 	{
 		BufferedImage img = render("Zulrah drops Tanzanite fang", false, 0, W, H);
 		save(img, "market");
-		assertTrue(containsColor(img, DropMarketConfig.KALSHI_GREEN));
+		assertTrue(containsColor(img, DropMarketConfig.DEFAULT_LINE_COLOR));
 	}
 
 	@Test
 	public void resolvedFlashesRaidPurple() throws Exception
 	{
 		BufferedImage on = render("Chambers of Xeric drops Twisted bow", true, 0, W, H);
-		BufferedImage off = render("Chambers of Xeric drops Twisted bow", true, 400, W, H);
+		BufferedImage off = render("Chambers of Xeric drops Twisted bow", true, 2, W, H);
 		save(on, "resolved-flash-on");
 		save(off, "resolved-flash-off");
 		assertTrue(containsColor(on, MarketPainter.RAID_PURPLE));
@@ -80,7 +166,7 @@ public class MarketPainterTest
 	@Test
 	public void longTitlesAndOtherSizesRender() throws Exception
 	{
-		save(render(DropMarketPlugin.LIVE_ODDS, false, 700, W, H), "live-odds");
+		save(render(DropMarketPlugin.LIVE_ODDS, false, 7, W, H), "live-odds");
 		save(render("Theatre of Blood drops Sanguinesti staff and an extremely long suffix", false, 0, W, H),
 			"long-title");
 		save(render("Tombs of Amascut drops Tumeken's shadow", false, 0, 320, 160), "large");
@@ -90,17 +176,16 @@ public class MarketPainterTest
 	@Test
 	public void brandBarsRender() throws Exception
 	{
-		MarketGraph graph = new MarketGraph(new Random(1234));
-		graph.reset();
 		MarketGraph poly = new MarketGraph(new Random(99));
 		poly.reset();
-		BufferedImage img = new BufferedImage(W, H, BufferedImage.TYPE_INT_ARGB);
-		Graphics2D g = img.createGraphics();
-		MarketPainter.paint(g, W, H, "Zulrah drops Tanzanite fang", graph, DropMarketConfig.KALSHI_GREEN, false, 0,
-			FontManager.getRunescapeBoldFont(), FontManager.getRunescapeSmallFont(), "0:42", false, true, true, poly, 1_400_000L,
-			true, "Kalshi Odds", "Polymarket Odds");
-		g.dispose();
+		TestConfig config = new TestConfig();
+		config.showBar1 = true;
+		config.showBar2 = true;
+		config.showDualLine = true;
+		config.bar1Text = "Line 1 Odds";
+		config.bar2Text = "Line 2 Odds";
+		BufferedImage img = render("Zulrah drops Tanzanite fang", false, 0, W, H, config, poly, 1_400_000L);
 		save(img, "brand-bars");
-		assertTrue(containsColor(img, DropMarketConfig.KALSHI_GREEN));
+		assertTrue(containsColor(img, DropMarketConfig.DEFAULT_LINE_COLOR));
 	}
 }

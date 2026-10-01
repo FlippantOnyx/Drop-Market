@@ -21,6 +21,8 @@ public class MarketPainterTest
 	{
 		Color graphColor = DEFAULT_LINE_COLOR;
 		Color line2Color = DEFAULT_LINE2_COLOR;
+		Color negativeDeltaColor1 = DEFAULT_NEGATIVE_DELTA_COLOR;
+		Color negativeDeltaColor2 = DEFAULT_NEGATIVE_DELTA_COLOR;
 		boolean showBar1;
 		boolean showBar2;
 		boolean showDualLine;
@@ -41,6 +43,18 @@ public class MarketPainterTest
 		public Color line2Color()
 		{
 			return line2Color;
+		}
+
+		@Override
+		public Color negativeDeltaColor1()
+		{
+			return negativeDeltaColor1;
+		}
+
+		@Override
+		public Color negativeDeltaColor2()
+		{
+			return negativeDeltaColor2;
 		}
 
 		@Override
@@ -117,7 +131,7 @@ public class MarketPainterTest
 		BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
 		Graphics2D g = img.createGraphics();
 		MarketPainter.paint(g, w, h, title, graph, polyGraph, config, resolved, nowTick,
-			FontManager.getRunescapeBoldFont(), FontManager.getRunescapeSmallFont(), "3 KC", true, volumePop, 12);
+			FontManager.getRunescapeBoldFont(), FontManager.getRunescapeSmallFont(), "3 KC", true, volumePop, 12, 9);
 		g.dispose();
 		return img;
 	}

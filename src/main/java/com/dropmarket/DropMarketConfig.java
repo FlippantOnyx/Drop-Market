@@ -13,6 +13,8 @@ public interface DropMarketConfig extends Config
 	Color DEFAULT_LINE2_COLOR = new Color(0x3D7BFF);
 	Color DEFAULT_BAR1_COLOR = new Color(0x1652F0);
 	Color DEFAULT_BAR2_COLOR = new Color(0x00D991);
+	// Classic stock-ticker red for a negative move.
+	Color DEFAULT_NEGATIVE_DELTA_COLOR = new Color(0xE5484D);
 
 	@ConfigItem(
 		keyName = "graphColor",
@@ -37,12 +39,34 @@ public interface DropMarketConfig extends Config
 	}
 
 	@ConfigItem(
+		keyName = "negativeDeltaColor1",
+		name = "Line 1 negative delta color",
+		description = "Color of line 1's change indicator when it drops",
+		position = 3
+	)
+	default Color negativeDeltaColor1()
+	{
+		return DEFAULT_NEGATIVE_DELTA_COLOR;
+	}
+
+	@ConfigItem(
+		keyName = "negativeDeltaColor2",
+		name = "Line 2 negative delta color",
+		description = "Color of line 2's change indicator when it drops",
+		position = 4
+	)
+	default Color negativeDeltaColor2()
+	{
+		return DEFAULT_NEGATIVE_DELTA_COLOR;
+	}
+
+	@ConfigItem(
 		keyName = "priorityItems",
 		name = "Priority drops",
 		description = "One per line as 'Source: Item' to bet on that item instead of the most expensive drop.<br>"
 			+ "e.g. 'Chambers of Xeric: Dexterous prayer scroll' or 'Zulrah: Serpentine visage'.<br>"
 			+ "Raids also accept CoX / ToB / ToA.",
-		position = 3
+		position = 5
 	)
 	default String priorityItems()
 	{
@@ -54,7 +78,7 @@ public interface DropMarketConfig extends Config
 		name = "Minimum drop value",
 		description = "Monsters whose best tradeable drop is worth less than this show LIVE ODDS,<br>"
 			+ "unless they drop an untradeable collection log item you haven't unlocked yet",
-		position = 4
+		position = 6
 	)
 	default int minimumDropValue()
 	{
@@ -67,7 +91,7 @@ public interface DropMarketConfig extends Config
 		description = "Read your collection log from RuneProfile (requires the RuneProfile plugin to have synced it).<br>"
 			+ "Without this, unlocks are learned by browsing your collection log in-game.",
 		warning = "This feature submits your IP address to a 3rd-party server not controlled or verified by RuneLite developers",
-		position = 5
+		position = 7
 	)
 	default boolean runeProfileSync()
 	{
@@ -79,7 +103,7 @@ public interface DropMarketConfig extends Config
 		name = "OSRS Wiki drop tables",
 		description = "Look up drop tables on the OSRS Wiki for monsters that aren't built into the plugin",
 		warning = "This feature submits your IP address to a 3rd-party server not controlled or verified by RuneLite developers",
-		position = 6
+		position = 8
 	)
 	default boolean wikiLookup()
 	{
@@ -90,40 +114,40 @@ public interface DropMarketConfig extends Config
 		keyName = "showBar1",
 		name = "Show bar 1",
 		description = "Show the top colored bar across the top of the overlay",
-		position = 7
+		position = 9
 	)
 	default boolean showBar1()
 	{
-		return true;
+		return false;
 	}
 
 	@ConfigItem(
 		keyName = "showBar2",
 		name = "Show bar 2",
 		description = "Show the second colored bar across the top of the overlay",
-		position = 8
+		position = 10
 	)
 	default boolean showBar2()
 	{
-		return true;
+		return false;
 	}
 
 	@ConfigItem(
 		keyName = "showDualLine",
 		name = "Show dual line",
 		description = "Display a second independent price line alongside the main line",
-		position = 9
+		position = 11
 	)
 	default boolean showDualLine()
 	{
-		return true;
+		return false;
 	}
 
 	@ConfigItem(
 		keyName = "bar1Color",
 		name = "Bar 1 color",
 		description = "Color of the top bar",
-		position = 10
+		position = 12
 	)
 	default Color bar1Color()
 	{
@@ -134,7 +158,7 @@ public interface DropMarketConfig extends Config
 		keyName = "bar2Color",
 		name = "Bar 2 color",
 		description = "Color of the second bar",
-		position = 11
+		position = 13
 	)
 	default Color bar2Color()
 	{
@@ -145,7 +169,7 @@ public interface DropMarketConfig extends Config
 		keyName = "bar1TextColor",
 		name = "Bar 1 text color",
 		description = "Color of the text displayed in the top bar",
-		position = 12
+		position = 14
 	)
 	default Color bar1TextColor()
 	{
@@ -156,7 +180,7 @@ public interface DropMarketConfig extends Config
 		keyName = "bar2TextColor",
 		name = "Bar 2 text color",
 		description = "Color of the text displayed in the second bar",
-		position = 13
+		position = 15
 	)
 	default Color bar2TextColor()
 	{
@@ -167,7 +191,7 @@ public interface DropMarketConfig extends Config
 		keyName = "bar1Text",
 		name = "Bar 1 text",
 		description = "Custom text to display in the top bar (leave blank for no text)",
-		position = 14
+		position = 16
 	)
 	default String bar1Text()
 	{
@@ -178,7 +202,7 @@ public interface DropMarketConfig extends Config
 		keyName = "bar2Text",
 		name = "Bar 2 text",
 		description = "Custom text to display in the second bar (leave blank for no text)",
-		position = 15
+		position = 17
 	)
 	default String bar2Text()
 	{

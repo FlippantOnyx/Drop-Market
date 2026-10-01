@@ -9,11 +9,14 @@ import java.awt.Graphics2D;
 import java.awt.Polygon;
 import java.awt.RenderingHints;
 import java.awt.Stroke;
+import java.awt.font.TextAttribute;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Path2D;
 import java.awt.geom.RoundRectangle2D;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 final class MarketPainter
 {
@@ -44,7 +47,7 @@ final class MarketPainter
 
 	static void paint(Graphics2D graphics, int w, int h, String title, MarketGraph graph, MarketGraph polyGraph,
 		DropMarketConfig config, boolean resolved, long nowTick, Font titleFont, Font smallFont, String badge,
-		boolean badgeSkull, long volumePop, int resolvedDelta)
+		boolean badgeSkull, long volumePop, int resolvedDelta, int resolvedDelta2)
 	{
 		Graphics2D g = (Graphics2D) graphics.create();
 		try
@@ -52,6 +55,8 @@ final class MarketPainter
 			boolean flashOn = resolved && (nowTick / FLASH_PERIOD_TICKS) % 2 == 0;
 			Color lineColor = config.graphColor();
 			Color accent = flashOn ? RAID_PURPLE : lineColor;
+			MarketGraph secondLine = config.showDualLine() ? polyGraph : null;
+			Color accent2 = flashOn ? RAID_PURPLE : config.line2Color();
 
 			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 			RoundRectangle2D panel = new RoundRectangle2D.Double(0, 0, w - 1, h - 1, 8, 8);
@@ -141,20 +146,11 @@ final class MarketPainter
 			int x = PAD + bigFm.stringWidth(pctText) + 10;
 
 			int delta = resolved ? resolvedDelta : (int) Math.round(graph.current() - graph.previous());
-			if (delta != 0)
+			int deltaW = drawDelta(g, x, y, delta, accent, config.negativeDeltaColor1(), smallFont);
+			if (secondLine != null)
 			{
-				String deltaText = Math.abs(delta) + "%";
-				Font deltaFont = smallFont.deriveFont(Font.BOLD, smallFont.getSize2D() * 1.15f);
-				FontMetrics deltaFm = g.getFontMetrics(deltaFont);
-				int triW = 7;
-				int mid = y - deltaFm.getAscent() / 2;
-				Polygon tri = delta > 0
-					? new Polygon(new int[]{x, x + triW, x + triW / 2}, new int[]{mid + 3, mid + 3, mid - 3}, 3)
-					: new Polygon(new int[]{x, x + triW, x + triW / 2}, new int[]{mid - 3, mid - 3, mid + 3}, 3);
-				g.setColor(accent);
-				g.fill(tri);
-				g.setFont(deltaFont);
-				text(g, deltaText, x + triW + 4, y, accent);
+				int delta2 = resolved ? resolvedDelta2 : (int) Math.round(secondLine.current() - secondLine.previous());
+				drawDelta(g, x + deltaW + 8, y, delta2, accent2, config.negativeDeltaColor2(), smallFont);
 			}
 			y += bigFm.getDescent();
 			g.setFont(smallFont);
@@ -167,7 +163,6 @@ final class MarketPainter
 			int chartBottom = h - PAD - footerH - smallFm.getAscent() / 2;
 			if (chartBottom - chartTop >= 10 && chartRight - chartLeft >= 20)
 			{
-				MarketGraph secondLine = config.showDualLine() ? polyGraph : null;
 				drawChart(g, graph, secondLine, accent, config.line2Color(), chartLeft, chartTop, chartRight,
 					chartBottom, smallFm, nowTick);
 			}
@@ -197,6 +192,40 @@ final class MarketPainter
 		{
 			g.dispose();
 		}
+	}
+
+	/** Always renders (the delta should never disappear); the arrow is skipped only for an exact 0. */
+	private static int drawDelta(Graphics2D g, int x, int y, int delta, Color positiveColor, Color negativeColor,
+		Font smallFont)
+	{
+		Color color = delta < 0 ? negativeColor : positiveColor;
+		String deltaText = Math.abs(delta) + "%";
+		Font deltaFont = deltaFont(smallFont);
+		FontMetrics deltaFm = g.getFontMetrics(deltaFont);
+		int triW = 7;
+		int mid = y - deltaFm.getAscent() / 2;
+		int textX = x;
+		if (delta != 0)
+		{
+			Polygon tri = delta > 0
+				? new Polygon(new int[]{x, x + triW, x + triW / 2}, new int[]{mid + 3, mid + 3, mid - 3}, 3)
+				: new Polygon(new int[]{x, x + triW, x + triW / 2}, new int[]{mid - 3, mid - 3, mid + 3}, 3);
+			g.setColor(color);
+			g.fill(tri);
+			textX = x + triW + 4;
+		}
+		g.setFont(deltaFont);
+		text(g, deltaText, textX, y, color);
+		return (textX - x) + deltaFm.stringWidth(deltaText);
+	}
+
+	// One step lighter than full bold - still bold enough to read at a glance, but not as heavy-handed.
+	private static Font deltaFont(Font smallFont)
+	{
+		Font base = smallFont.deriveFont(smallFont.getSize2D() * 1.15f);
+		Map<TextAttribute, Object> attrs = new HashMap<>();
+		attrs.put(TextAttribute.WEIGHT, TextAttribute.WEIGHT_DEMIBOLD);
+		return base.deriveFont(attrs);
 	}
 
 	private static void drawBarText(Graphics2D g, String s, int w, int barTop, int barH, Color color)

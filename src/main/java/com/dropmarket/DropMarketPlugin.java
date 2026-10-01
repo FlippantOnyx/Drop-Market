@@ -170,7 +170,7 @@ public class DropMarketPlugin extends Plugin
 	private final Map<String, Long> priceCache = new HashMap<>();
 	private final Map<String, Integer> killCounts = new HashMap<>();
 	private final Map<String, Integer> skillCounts = new HashMap<>();
-	private Map<String, String> priorities = Collections.emptyMap();
+	private Map<String, List<String>> priorities = Collections.emptyMap();
 	@Getter
 	private int ticks;
 	private int loginTick;
@@ -793,9 +793,10 @@ public class DropMarketPlugin extends Plugin
 	private String chooseItem(String source)
 	{
 		List<String> table = DropTables.lookup(source);
-		String priority = priorities.get(DropTables.normalize(source));
-		if (priority != null)
+		List<String> priorityList = priorities.get(DropTables.normalize(source));
+		if (priorityList != null && !priorityList.isEmpty())
 		{
+			String priority = priorityList.get(random.nextInt(priorityList.size()));
 			return DropTables.matchItem(priority, table);
 		}
 		if (DropTables.TREASURE_TRAILS.equals(source))
@@ -911,15 +912,24 @@ public class DropMarketPlugin extends Plugin
 	{
 		boolean hit = false;
 		boolean clogChanged = false;
+		List<String> table = marketSource == null ? null : DropTables.lookup(marketSource);
 		for (ItemStack stack : items)
 		{
 			String name = itemManager.getItemComposition(itemManager.canonicalize(stack.getId())).getName();
 			boolean isTarget = marketItem != null && matchesMarketItem(name);
-			if (clog.isSlot(name) || (isTarget && priceOf(name) < 0))
+			// Any item from the monster/event's own notable table is worth celebrating - even one
+			// already in the collection log - not just whichever single item the market happened to
+			// be betting on (e.g. landing Osmumten's fang while the market was showing Tumeken's shadow).
+			boolean isTableDrop = !isTarget && !resolved && table != null && tableContains(table, name);
+			if (clog.isSlot(name) || ((isTarget || isTableDrop) && priceOf(name) < 0))
 			{
 				clogChanged |= clog.record(name, true);
 			}
-			hit |= isTarget;
+			if (isTableDrop)
+			{
+				marketItem = name;
+			}
+			hit |= isTarget || isTableDrop;
 		}
 		if (clogChanged)
 		{
@@ -929,6 +939,19 @@ public class DropMarketPlugin extends Plugin
 		{
 			resolve();
 		}
+	}
+
+	private static boolean tableContains(List<String> table, String itemName)
+	{
+		String n = DropTables.normalize(itemName);
+		for (String item : table)
+		{
+			if (DropTables.normalize(item).equals(n))
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private void resolve()

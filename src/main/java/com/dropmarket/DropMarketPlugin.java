@@ -157,6 +157,9 @@ public class DropMarketPlugin extends Plugin
 	@Getter
 	private int resolvedDelta;
 
+	@Getter
+	private int resolvedDelta2;
+
 	private final Random random = new Random();
 	private long volumePop;
 	private int volumePopTick;
@@ -226,6 +229,7 @@ public class DropMarketPlugin extends Plugin
 		showingMarket = false;
 		resolved = false;
 		resolvedDelta = 0;
+		resolvedDelta2 = 0;
 		personalOverride = false;
 		volumePop = 0;
 		volumePopTick = -VOLUME_POP_TICKS - 1;
@@ -900,6 +904,7 @@ public class DropMarketPlugin extends Plugin
 	private void resolve()
 	{
 		resolvedDelta = (int) Math.round(100 - graph.current());
+		resolvedDelta2 = (int) Math.round(100 - polyGraph.current());
 		resolved = true;
 		resolvedTick = ticks;
 		showingMarket = true;

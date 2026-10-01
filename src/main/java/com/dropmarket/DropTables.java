@@ -434,10 +434,14 @@ final class DropTables
 		return item.replaceAll("\\s*\\(.*?\\)", "").trim();
 	}
 
-	/** Parses "Source: Item" lines into normalized canonical source -> item, so "CoX: Dex scroll" works. */
-	static Map<String, String> parsePriorities(String config)
+	/**
+	 * Parses "Source: Item" lines into normalized canonical source -> items, so "CoX: Dex scroll" works.
+	 * Multiple lines for the same source are all kept (not overwritten), so the caller can roll between
+	 * them - each line is an equally-weighted entry, so repeating one gives it more weight.
+	 */
+	static Map<String, List<String>> parsePriorities(String config)
 	{
-		Map<String, String> out = new HashMap<>();
+		Map<String, List<String>> out = new HashMap<>();
 		if (config == null)
 		{
 			return out;
@@ -453,7 +457,7 @@ final class DropTables
 			String item = line.substring(sep + 1).trim();
 			if (!source.isEmpty() && !item.isEmpty())
 			{
-				out.put(normalize(canonicalSource(source)), item);
+				out.computeIfAbsent(normalize(canonicalSource(source)), k -> new ArrayList<>()).add(item);
 			}
 		}
 		return out;

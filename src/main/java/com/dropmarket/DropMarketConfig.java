@@ -65,7 +65,7 @@ public interface DropMarketConfig extends Config
 		name = "Priority drops",
 		description = "One per line as 'Source: Item' to bet on that item instead of the most expensive drop.<br>"
 			+ "e.g. 'Chambers of Xeric: Dexterous prayer scroll' or 'Zulrah: Serpentine visage'.<br>"
-			+ "Raids also accept CoX / ToB / ToA.",
+			+ "Raids also accept CoX / ToB / ToA. Multiple lines for the same source are rolled between evenly.",
 		position = 5
 	)
 	default String priorityItems()

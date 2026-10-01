@@ -50,16 +50,26 @@ public class DropTablesTest
 	@Test
 	public void parsePrioritiesResolvesAliasesAndSeparators()
 	{
-		Map<String, String> p = DropTables.parsePriorities(
+		Map<String, List<String>> p = DropTables.parsePriorities(
 			"CoX: Dexterous prayer scroll\n"
 				+ "Zulrah = Serpentine visage\r\n"
 				+ "\n"
 				+ "garbage line\n"
 				+ "tob:   Avernic defender hilt  ");
-		assertEquals("Dexterous prayer scroll", p.get(DropTables.normalize(DropTables.CHAMBERS_OF_XERIC)));
-		assertEquals("Serpentine visage", p.get("zulrah"));
-		assertEquals("Avernic defender hilt", p.get(DropTables.normalize(DropTables.THEATRE_OF_BLOOD)));
+		assertEquals(List.of("Dexterous prayer scroll"), p.get(DropTables.normalize(DropTables.CHAMBERS_OF_XERIC)));
+		assertEquals(List.of("Serpentine visage"), p.get("zulrah"));
+		assertEquals(List.of("Avernic defender hilt"), p.get(DropTables.normalize(DropTables.THEATRE_OF_BLOOD)));
 		assertEquals(3, p.size());
+	}
+
+	@Test
+	public void parsePrioritiesKeepsEveryLineForTheSameSourceToRollBetween()
+	{
+		Map<String, List<String>> p = DropTables.parsePriorities(
+			"Zulrah: Serpentine visage\n"
+				+ "Zulrah: Tanzanite mutagen\n"
+				+ "Zulrah: Serpentine visage");
+		assertEquals(List.of("Serpentine visage", "Tanzanite mutagen", "Serpentine visage"), p.get("zulrah"));
 	}
 
 	@Test

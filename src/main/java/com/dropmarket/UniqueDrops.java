@@ -31,9 +31,17 @@ final class UniqueDrops
 
 	private static Set<String> logItems;
 	private static Map<String, Set<String>> logDropsBySource;
+	private static Gson gson;
 
 	private UniqueDrops()
 	{
+	}
+
+	/** Uses the client's injected Gson (the plugin hub forbids creating fresh instances). */
+	static synchronized void configure(Gson injected)
+	{
+		gson = injected;
+		logItems = null;
 	}
 
 	static synchronized boolean isLogDrop(String source, String item)
@@ -74,6 +82,11 @@ final class UniqueDrops
 		}
 		logItems = new HashSet<>();
 		logDropsBySource = new HashMap<>();
+		if (gson == null)
+		{
+			log.warn("Bundled collection log data not configured");
+			return;
+		}
 		try (InputStream in = UniqueDrops.class.getResourceAsStream(RESOURCE))
 		{
 			if (in == null)
@@ -81,7 +94,7 @@ final class UniqueDrops
 				log.warn("Bundled collection log data missing");
 				return;
 			}
-			Data data = new Gson().fromJson(new InputStreamReader(in, StandardCharsets.UTF_8), Data.class);
+			Data data = gson.fromJson(new InputStreamReader(in, StandardCharsets.UTF_8), Data.class);
 			if (data == null)
 			{
 				return;

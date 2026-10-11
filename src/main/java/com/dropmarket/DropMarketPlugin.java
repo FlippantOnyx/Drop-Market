@@ -2,6 +2,7 @@ package com.dropmarket;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.gson.Gson;
 import com.google.inject.Provides;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -138,6 +139,9 @@ public class DropMarketPlugin extends Plugin
 	private WikiDropTableClient wiki;
 
 	@Inject
+	private Gson gson;
+
+	@Inject
 	private CollectionLogTracker clog;
 
 	@Getter
@@ -211,6 +215,8 @@ public class DropMarketPlugin extends Plugin
 	protected void startUp()
 	{
 		priorities = DropTables.parsePriorities(config.priorityItems());
+		BundledDropTables.configure(gson);
+		UniqueDrops.configure(gson);
 		blacklist = DropTables.parsePriorities(config.blacklistItems());
 		ticks = 0;
 		loginTick = 0;

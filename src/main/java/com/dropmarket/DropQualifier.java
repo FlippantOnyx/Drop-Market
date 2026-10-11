@@ -2,7 +2,7 @@ package com.dropmarket;
 
 /**
  * Decides whether a drop counts as a success on the odds. Pure logic, kept separate from the plugin so every
- * rule (blacklist, priority, threshold, pop-off, unique and unpriced collection log items) can be tested without
+ * rule (blacklist, priority, threshold, pop-off, new and unpriced collection log items) can be tested without
  * a client.
  */
 final class DropQualifier
@@ -27,13 +27,14 @@ final class DropQualifier
 	/**
 	 * A received item. The lists trump everything: a blacklisted item never counts (not even under Pop Off), and a
 	 * priority item always counts, whatever it's worth. Otherwise Pop Off counts everything (down to its minimum
-	 * value); a unique drop of this monster always counts; before prices load only a collection log slot counts;
+	 * value); a collection log item new to the account always counts (a log drop that isn't new is price-checked like any
+	 * other drop); before prices load only a collection log slot counts;
 	 * an unpriced item counts when it's a known chase (on the table, the market's own target, or a collection log
 	 * slot) since it can't be judged on value; and a priced item must be on the table or be the target and clear the
 	 * valuable-drop threshold.
 	 */
 	static boolean lootQualifies(long price, long threshold, boolean onTable, boolean isTarget, boolean clogSlot,
-		boolean unique, ListStatus list, boolean popOff, long popOffMin)
+		boolean newLogItem, ListStatus list, boolean popOff, long popOffMin)
 	{
 		if (list == ListStatus.BLACKLISTED)
 		{
@@ -46,11 +47,11 @@ final class DropQualifier
 		boolean chase = onTable || isTarget || clogSlot;
 		if (popOff)
 		{
-			return popOffMin <= 0 || price >= popOffMin || unique || (price == NO_PRICE && chase);
+			return popOffMin <= 0 || price >= popOffMin || newLogItem || (price == NO_PRICE && chase);
 		}
-		if (unique)
+		if (newLogItem)
 		{
-			// A unique drop of this monster is a win whatever it's worth (or whether it's priced yet).
+			// It opens a new collection log slot, so it's a win whatever it's worth (or whether it's priced yet).
 			return true;
 		}
 		if (price == PRICES_NOT_LOADED)
@@ -66,7 +67,7 @@ final class DropQualifier
 	}
 
 	/** The game's "Valuable drop" chat message; {@code value} is negative when it couldn't be determined. */
-	static boolean valuableMessageQualifies(long value, long threshold, boolean unique, ListStatus list,
+	static boolean valuableMessageQualifies(long value, long threshold, boolean newLogItem, ListStatus list,
 		boolean popOff, long popOffMin)
 	{
 		if (list != ListStatus.NONE)
@@ -75,10 +76,10 @@ final class DropQualifier
 		}
 		if (popOff)
 		{
-			return popOffMin <= 0 || value < 0 || value >= popOffMin || unique;
+			return popOffMin <= 0 || value < 0 || value >= popOffMin || newLogItem;
 		}
 		// The game flagged it as valuable but we can't price it (a brand new item): trust the game.
-		return unique || value < 0 || value >= threshold;
+		return newLogItem || value < 0 || value >= threshold;
 	}
 
 	/**

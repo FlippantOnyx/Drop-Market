@@ -66,6 +66,7 @@ public interface DropMarketConfig extends Config
 		keyName = "priorityItems",
 		name = "Priority Drops",
 		description = "One per line as 'Source: Item' to bet on that item instead of the most expensive drop.<br>"
+			+ "A priority drop always counts as a win when you get it, whatever it's worth.<br>"
 			+ "e.g. 'Chambers of Xeric: Dexterous prayer scroll' or 'Zulrah: Serpentine visage'.<br>"
 			+ "Raids also accept CoX / ToB / ToA. Multiple lines for the same source are rolled between evenly.",
 		position = 5
@@ -80,7 +81,7 @@ public interface DropMarketConfig extends Config
 		name = "Blacklisted Drops",
 		description = "One per line as 'Source: Item' to never bet on or celebrate that item.<br>"
 			+ "e.g. 'Zulrah: Tanzanite fang' or 'CoX: Dexterous prayer scroll'.<br>"
-			+ "Raids also accept CoX / ToB / ToA. Takes precedence over priority drops.",
+			+ "Raids also accept CoX / ToB / ToA. Trumps everything, including priority drops and Pop Off on Every Drop.",
 		position = 6
 	)
 	default String blacklistItems()
@@ -201,7 +202,8 @@ public interface DropMarketConfig extends Config
 	@ConfigItem(
 		keyName = "popOffOnEveryDrop",
 		name = "Pop Off on Every Drop",
-		description = "Treat every drop you receive as a success, ignoring the valuable drop threshold and blacklist",
+		description = "Treat every drop you receive as a success, ignoring the valuable drop threshold.<br>"
+			+ "Blacklisted drops still never count, and priority drops always do.",
 		position = 16
 	)
 	default boolean popOffOnEveryDrop()

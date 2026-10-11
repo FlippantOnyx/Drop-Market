@@ -643,8 +643,9 @@ public class DropMarketPlugin extends Plugin
 					long price = priceOf(item);
 					value = price == DropQualifier.NO_PRICE || price == DropQualifier.PRICES_NOT_LOADED ? -1 : price;
 				}
-				if (DropQualifier.valuableMessageQualifies(value, config.valuableDropThreshold(), isBlacklistedHere(item),
-					config.popOffOnEveryDrop(), config.popOffMinValue()))
+				boolean unique = tableContains(currentTable(), item) && UniqueDrops.isUnique(currentSource(), item);
+				if (DropQualifier.valuableMessageQualifies(value, config.valuableDropThreshold(), unique,
+					isBlacklistedHere(item), config.popOffOnEveryDrop(), config.popOffMinValue()))
 				{
 					celebrateDrop(item);
 				}
@@ -1007,8 +1008,9 @@ public class DropMarketPlugin extends Plugin
 			// be betting on (e.g. landing Osmumten's fang while the market was showing Tumeken's shadow).
 			boolean onTable = tableContains(table, name);
 			boolean slot = clog.isSlot(name);
+			boolean unique = onTable && UniqueDrops.isUnique(marketSource, name);
 			boolean qualifies = DropQualifier.lootQualifies(price, config.valuableDropThreshold(), onTable, isTarget,
-				slot, isBlacklisted(marketSource, table, name), popOff, config.popOffMinValue());
+				slot, unique, isBlacklisted(marketSource, table, name), popOff, config.popOffMinValue());
 			// A table/target item with no market value is a collection log chase we haven't seen yet: learn it.
 			if (slot || ((isTarget || onTable) && price == DropQualifier.NO_PRICE))
 			{

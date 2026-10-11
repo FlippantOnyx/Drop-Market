@@ -37,16 +37,6 @@ final class BundledDropTables
 		return table == null ? null : Collections.unmodifiableList(table);
 	}
 
-	/** Every bundled table, keyed by normalized source. */
-	static synchronized Map<String, List<String>> all()
-	{
-		if (tables == null)
-		{
-			tables = load();
-		}
-		return Collections.unmodifiableMap(tables);
-	}
-
 	private static Map<String, List<String>> load()
 	{
 		try (InputStream in = BundledDropTables.class.getResourceAsStream(RESOURCE))

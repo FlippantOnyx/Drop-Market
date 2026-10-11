@@ -11,14 +11,14 @@ public interface DropMarketConfig extends Config
 	String GROUP = "dropmarket";
 	Color DEFAULT_LINE_COLOR = new Color(0x00D991);
 	Color DEFAULT_LINE2_COLOR = new Color(0x3D7BFF);
-	Color DEFAULT_BAR1_COLOR = new Color(0x1652F0);
-	Color DEFAULT_BAR2_COLOR = new Color(0x00D991);
+	Color DEFAULT_BAR1_COLOR = new Color(0x00D991);
+	Color DEFAULT_BAR2_COLOR = new Color(0x1652F0);
 	// Classic stock-ticker red for a negative move.
 	Color DEFAULT_NEGATIVE_DELTA_COLOR = new Color(0xE5484D);
 
 	@ConfigItem(
 		keyName = "graphColor",
-		name = "Line 1 color",
+		name = "Line 1 Color",
 		description = "Color of the main odds line",
 		position = 1
 	)
@@ -29,7 +29,7 @@ public interface DropMarketConfig extends Config
 
 	@ConfigItem(
 		keyName = "line2Color",
-		name = "Line 2 color",
+		name = "Line 2 Color",
 		description = "Color of the second, independent odds line",
 		position = 2
 	)
@@ -40,7 +40,7 @@ public interface DropMarketConfig extends Config
 
 	@ConfigItem(
 		keyName = "negativeDeltaColor1",
-		name = "Line 1 negative delta color",
+		name = "Line 1 Negative Delta Color",
 		description = "Color of line 1's change indicator when it drops",
 		position = 3
 	)
@@ -51,7 +51,7 @@ public interface DropMarketConfig extends Config
 
 	@ConfigItem(
 		keyName = "negativeDeltaColor2",
-		name = "Line 2 negative delta color",
+		name = "Line 2 Negative Delta Color",
 		description = "Color of line 2's change indicator when it drops",
 		position = 4
 	)
@@ -62,7 +62,7 @@ public interface DropMarketConfig extends Config
 
 	@ConfigItem(
 		keyName = "priorityItems",
-		name = "Priority drops",
+		name = "Priority Drops",
 		description = "One per line as 'Source: Item' to bet on that item instead of the most expensive drop.<br>"
 			+ "e.g. 'Chambers of Xeric: Dexterous prayer scroll' or 'Zulrah: Serpentine visage'.<br>"
 			+ "Raids also accept CoX / ToB / ToA. Multiple lines for the same source are rolled between evenly.",
@@ -74,11 +74,36 @@ public interface DropMarketConfig extends Config
 	}
 
 	@ConfigItem(
+		keyName = "blacklistItems",
+		name = "Blacklisted Drops",
+		description = "One per line as 'Source: Item' to never bet on or celebrate that item.<br>"
+			+ "e.g. 'Zulrah: Tanzanite fang' or 'CoX: Dexterous prayer scroll'.<br>"
+			+ "Raids also accept CoX / ToB / ToA. Takes precedence over priority drops.",
+		position = 6
+	)
+	default String blacklistItems()
+	{
+		return "";
+	}
+
+	@ConfigItem(
+		keyName = "valuableDropThreshold",
+		name = "Valuable Drop Min Threshold",
+		description = "Minimum value for a success hit on the odds: a tradeable drop worth less than this<br>"
+			+ "won't resolve the market or flash. Untradeable collection log items always count.",
+		position = 7
+	)
+	default int valuableDropThreshold()
+	{
+		return 2_000_000;
+	}
+
+	@ConfigItem(
 		keyName = "minimumDropValue",
-		name = "Minimum drop value",
+		name = "Lowest Value GP From Monster",
 		description = "Monsters whose best tradeable drop is worth less than this show LIVE ODDS,<br>"
 			+ "unless they drop an untradeable collection log item you haven't unlocked yet",
-		position = 6
+		position = 8
 	)
 	default int minimumDropValue()
 	{
@@ -87,11 +112,11 @@ public interface DropMarketConfig extends Config
 
 	@ConfigItem(
 		keyName = "runeProfileSync",
-		name = "RuneProfile collection log",
+		name = "RuneProfile Collection Log",
 		description = "Read your collection log from RuneProfile (requires the RuneProfile plugin to have synced it).<br>"
 			+ "Without this, unlocks are learned by browsing your collection log in-game.",
 		warning = "This feature submits your IP address to a 3rd-party server not controlled or verified by RuneLite developers",
-		position = 7
+		position = 9
 	)
 	default boolean runeProfileSync()
 	{
@@ -100,10 +125,10 @@ public interface DropMarketConfig extends Config
 
 	@ConfigItem(
 		keyName = "wikiLookup",
-		name = "OSRS Wiki drop tables",
+		name = "OSRS Wiki Drop Tables",
 		description = "Look up drop tables on the OSRS Wiki for monsters that aren't built into the plugin",
 		warning = "This feature submits your IP address to a 3rd-party server not controlled or verified by RuneLite developers",
-		position = 8
+		position = 10
 	)
 	default boolean wikiLookup()
 	{
@@ -112,9 +137,9 @@ public interface DropMarketConfig extends Config
 
 	@ConfigItem(
 		keyName = "showBar1",
-		name = "Show bar 1",
+		name = "Show Bar 1",
 		description = "Show the top colored bar across the top of the overlay",
-		position = 9
+		position = 11
 	)
 	default boolean showBar1()
 	{
@@ -123,9 +148,9 @@ public interface DropMarketConfig extends Config
 
 	@ConfigItem(
 		keyName = "showBar2",
-		name = "Show bar 2",
+		name = "Show Bar 2",
 		description = "Show the second colored bar across the top of the overlay",
-		position = 10
+		position = 12
 	)
 	default boolean showBar2()
 	{
@@ -134,9 +159,9 @@ public interface DropMarketConfig extends Config
 
 	@ConfigItem(
 		keyName = "showDualLine",
-		name = "Show dual line",
+		name = "Show Dual Line",
 		description = "Display a second independent price line alongside the main line",
-		position = 11
+		position = 13
 	)
 	default boolean showDualLine()
 	{
@@ -144,10 +169,32 @@ public interface DropMarketConfig extends Config
 	}
 
 	@ConfigItem(
+		keyName = "flashOnDrop",
+		name = "Flash On Drop",
+		description = "Flash the overlay purple when a drop hits",
+		position = 14
+	)
+	default boolean flashOnDrop()
+	{
+		return true;
+	}
+
+	@ConfigItem(
+		keyName = "popOffOnEveryDrop",
+		name = "Pop Off on Every Drop",
+		description = "Treat every drop you receive as a success, ignoring the valuable drop threshold and blacklist",
+		position = 15
+	)
+	default boolean popOffOnEveryDrop()
+	{
+		return false;
+	}
+
+	@ConfigItem(
 		keyName = "bar1Color",
-		name = "Bar 1 color",
+		name = "Bar 1 Color",
 		description = "Color of the top bar",
-		position = 12
+		position = 16
 	)
 	default Color bar1Color()
 	{
@@ -156,9 +203,9 @@ public interface DropMarketConfig extends Config
 
 	@ConfigItem(
 		keyName = "bar2Color",
-		name = "Bar 2 color",
+		name = "Bar 2 Color",
 		description = "Color of the second bar",
-		position = 13
+		position = 17
 	)
 	default Color bar2Color()
 	{
@@ -167,9 +214,9 @@ public interface DropMarketConfig extends Config
 
 	@ConfigItem(
 		keyName = "bar1TextColor",
-		name = "Bar 1 text color",
+		name = "Bar 1 Text Color",
 		description = "Color of the text displayed in the top bar",
-		position = 14
+		position = 18
 	)
 	default Color bar1TextColor()
 	{
@@ -178,9 +225,9 @@ public interface DropMarketConfig extends Config
 
 	@ConfigItem(
 		keyName = "bar2TextColor",
-		name = "Bar 2 text color",
+		name = "Bar 2 Text Color",
 		description = "Color of the text displayed in the second bar",
-		position = 15
+		position = 19
 	)
 	default Color bar2TextColor()
 	{
@@ -189,9 +236,9 @@ public interface DropMarketConfig extends Config
 
 	@ConfigItem(
 		keyName = "bar1Text",
-		name = "Bar 1 text",
+		name = "Bar 1 Text",
 		description = "Custom text to display in the top bar (leave blank for no text)",
-		position = 16
+		position = 20
 	)
 	default String bar1Text()
 	{
@@ -200,9 +247,9 @@ public interface DropMarketConfig extends Config
 
 	@ConfigItem(
 		keyName = "bar2Text",
-		name = "Bar 2 text",
+		name = "Bar 2 Text",
 		description = "Custom text to display in the second bar (leave blank for no text)",
-		position = 17
+		position = 21
 	)
 	default String bar2Text()
 	{

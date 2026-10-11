@@ -3,6 +3,7 @@ package com.dropmarket;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Provides;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumMap;
@@ -12,6 +13,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.inject.Inject;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -54,9 +57,9 @@ import net.runelite.http.api.item.ItemPrice;
 
 @Slf4j
 @PluginDescriptor(
-	name = "Drop Market",
+	name = "Drop Prediction Market",
 	description = "A tiny prediction-market graph betting on your next big drop",
-	tags = {"drop", "loot", "odds", "graph", "market", "raids", "fun"}
+	tags = {"drop", "loot", "odds", "graph", "market", "raids", "fun", "prediction market", "kalshi", "polymarket"}
 )
 public class DropMarketPlugin extends Plugin
 {
@@ -68,12 +71,12 @@ public class DropMarketPlugin extends Plugin
 	private static final int IDLE_TICKS = 50;
 	// Rock/tree respawns and moving between fishing spots leave bigger gaps than combat idling does.
 	private static final int SKILL_IDLE_TICKS = 150;
-	private static final int CELEBRATION_TICKS = 100;
+	private static final int CELEBRATION_TICKS = 25;
 	private static final int VOLUME_POP_TICKS = 8;
 	private static final double VOLUME_POP_CHANCE = 0.3;
 	// Rolled once per PvM kill/attempt: a flat shot at the market featuring the pet instead of the usual
 	// most-valuable drop, win or lose on the actual roll - and regardless of whether it's already obtained.
-	private static final double PET_FEATURE_CHANCE = 0.1;
+	private static final double PET_FEATURE_CHANCE = 1.0 / 200;
 	private static final long VOLUME_POP_MIN = 100_000L;
 	private static final long VOLUME_POP_MAX = 2_147_483_647L;
 	// Clue steps involve a lot of running around, so the clue market outlives normal idling.
@@ -82,6 +85,7 @@ public class DropMarketPlugin extends Plugin
 	private static final String GUARD_ITEM = "Armadyl helmet";
 	private static final String GUARD_DISPLAY = "Armadylean helmet";
 	private static final Set<String> GUARD_NAMES = ImmutableSet.of("armadylean guard", "bandosian guard");
+	private static final Pattern DROP_VALUE = Pattern.compile("\\(([\\d,]+) coins\\)\\s*$");
 	private static final String CLOG_MESSAGE = "New item added to your collection log:";
 	private static final Set<Integer> TOA_REGIONS = ImmutableSet.of(
 		14160, 15698, 15700, 14162, 14164, 15186, 15188, 14674, 14676, 15184, 15696, 14672);
@@ -171,6 +175,7 @@ public class DropMarketPlugin extends Plugin
 	private final Map<String, Integer> killCounts = new HashMap<>();
 	private final Map<String, Integer> skillCounts = new HashMap<>();
 	private Map<String, List<String>> priorities = Collections.emptyMap();
+	private Map<String, List<String>> blacklist = Collections.emptyMap();
 	@Getter
 	private int ticks;
 	private int loginTick;
@@ -207,6 +212,7 @@ public class DropMarketPlugin extends Plugin
 	protected void startUp()
 	{
 		priorities = DropTables.parsePriorities(config.priorityItems());
+		blacklist = DropTables.parsePriorities(config.blacklistItems());
 		ticks = 0;
 		loginTick = 0;
 		killCounts.clear();
@@ -622,10 +628,23 @@ public class DropMarketPlugin extends Plugin
 				clog.recordAndFlush(item, true);
 				celebrate(item);
 			}
-			else if (raw.regionMatches(true, 0, "Valuable drop:", 0, 14)
-				|| raw.regionMatches(true, 0, "Untradeable drop:", 0, 17))
+			else if (raw.regionMatches(true, 0, "Valuable drop:", 0, 14))
 			{
-				celebrate(parseDropItem(raw));
+				// The game's own threshold is user-set (often tiny), so apply ours before treating it as a hit.
+				String item = parseDropItem(raw);
+				long value = parseDropValue(raw);
+				if (value < 0)
+				{
+					value = priceOf(item);
+				}
+				celebrateDrop(item, value >= config.valuableDropThreshold() && !isBlacklistedHere(item));
+			}
+			else if (raw.regionMatches(true, 0, "Untradeable drop:", 0, 17))
+			{
+				// Only untradeables that are real chases count, not every untradeable the game announces.
+				String item = parseDropItem(raw);
+				celebrateDrop(item,
+					(clog.isSlot(item) || tableContains(currentTable(), item)) && !isBlacklistedHere(item));
 			}
 		}
 
@@ -666,6 +685,7 @@ public class DropMarketPlugin extends Plugin
 			return;
 		}
 		priorities = DropTables.parsePriorities(config.priorityItems());
+		blacklist = DropTables.parsePriorities(config.blacklistItems());
 		repickMarket();
 	}
 
@@ -796,8 +816,19 @@ public class DropMarketPlugin extends Plugin
 		List<String> priorityList = priorities.get(DropTables.normalize(source));
 		if (priorityList != null && !priorityList.isEmpty())
 		{
-			String priority = priorityList.get(random.nextInt(priorityList.size()));
-			return DropTables.matchItem(priority, table);
+			List<String> allowed = new ArrayList<>();
+			for (String priority : priorityList)
+			{
+				String item = DropTables.matchItem(priority, table);
+				if (!isBlacklisted(source, table, item))
+				{
+					allowed.add(item);
+				}
+			}
+			if (!allowed.isEmpty())
+			{
+				return allowed.get(random.nextInt(allowed.size()));
+			}
 		}
 		if (DropTables.TREASURE_TRAILS.equals(source))
 		{
@@ -832,8 +863,29 @@ public class DropMarketPlugin extends Plugin
 		return table == null ? null : pickItem(source, table, fromWiki);
 	}
 
-	private String pickItem(String source, List<String> table, boolean fromWiki)
+	/** True if "Source: Item" is on the blacklist; the table lets loose entries like "dex scroll" match. */
+	private boolean isBlacklisted(String source, List<String> table, String item)
 	{
+		List<String> banned = source == null ? null : blacklist.get(DropTables.normalize(source));
+		if (banned == null)
+		{
+			return false;
+		}
+		String n = DropTables.normalize(item);
+		for (String entry : banned)
+		{
+			if (DropTables.normalize(DropTables.matchItem(entry, table)).equals(n))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private String pickItem(String source, List<String> fullTable, boolean fromWiki)
+	{
+		List<String> table = new ArrayList<>(fullTable);
+		table.removeIf(item -> isBlacklisted(source, fullTable, item));
 		String picked = MarketPicker.pick(table, DropTables.isPetFirst(source), config.minimumDropValue(),
 			this::priceOf, item -> isLockedSlot(item, fromWiki));
 		if (DropTables.isPetFirst(source))
@@ -912,16 +964,31 @@ public class DropMarketPlugin extends Plugin
 	{
 		boolean hit = false;
 		boolean clogChanged = false;
+		String popItem = null;
+		long popPrice = Long.MIN_VALUE;
 		List<String> table = marketSource == null ? null : DropTables.lookup(marketSource);
 		for (ItemStack stack : items)
 		{
 			String name = itemManager.getItemComposition(itemManager.canonicalize(stack.getId())).getName();
+			long stackPrice = priceOf(name);
+			if (stackPrice > popPrice)
+			{
+				popItem = name;
+				popPrice = stackPrice;
+			}
 			boolean isTarget = marketItem != null && matchesMarketItem(name);
 			// Any item from the monster/event's own notable table is worth celebrating - even one
 			// already in the collection log - not just whichever single item the market happened to
 			// be betting on (e.g. landing Osmumten's fang while the market was showing Tumeken's shadow).
 			boolean isTableDrop = !isTarget && !resolved && table != null && tableContains(table, name);
-			if (clog.isSlot(name) || ((isTarget || isTableDrop) && priceOf(name) < 0))
+			// Blacklisted items never count, and a tradeable drop must clear the valuable-drop threshold.
+			long price = priceOf(name);
+			if (isBlacklisted(marketSource, table, name) || (price >= 0 && price < config.valuableDropThreshold()))
+			{
+				isTarget = false;
+				isTableDrop = false;
+			}
+			if (clog.isSlot(name) || ((isTarget || isTableDrop) && price < 0))
 			{
 				clogChanged |= clog.record(name, true);
 			}
@@ -935,14 +1002,39 @@ public class DropMarketPlugin extends Plugin
 		{
 			clog.flush();
 		}
-		if (hit && !resolved)
+		if (config.popOffOnEveryDrop() && popItem != null)
+		{
+			celebrateDrop(popItem, true);
+		}
+		else if (hit && !resolved)
 		{
 			resolve();
 		}
 	}
 
+	/** Celebrates a drop announced in chat; with Pop Off on Every Drop it always qualifies. */
+	private void celebrateDrop(String item, boolean qualifies)
+	{
+		if (config.popOffOnEveryDrop())
+		{
+			// Loot events and chat messages for the same drop land on the same tick; celebrate once.
+			if (!(resolved && resolvedTick == ticks))
+			{
+				celebrate(item);
+			}
+		}
+		else if (qualifies)
+		{
+			celebrate(item);
+		}
+	}
+
 	private static boolean tableContains(List<String> table, String itemName)
 	{
+		if (table == null)
+		{
+			return false;
+		}
 		String n = DropTables.normalize(itemName);
 		for (String item : table)
 		{
@@ -978,6 +1070,34 @@ public class DropMarketPlugin extends Plugin
 		marketSource = source == null ? UNKNOWN_SOURCE : source;
 		marketItem = item;
 		resolve();
+	}
+
+	/** The drop source a just-announced drop most likely belongs to, or null. */
+	private String currentSource()
+	{
+		if (ticks - lastLootTick <= LOOT_SOURCE_TICKS && lastLootSource != null)
+		{
+			return lastLootSource;
+		}
+		return marketSource;
+	}
+
+	private List<String> currentTable()
+	{
+		String source = currentSource();
+		return source == null ? null : DropTables.lookup(source);
+	}
+
+	private boolean isBlacklistedHere(String item)
+	{
+		return isBlacklisted(currentSource(), currentTable(), item);
+	}
+
+	/** Coin value from "(1,234 coins)" in a drop message, or -1 if it isn't there. */
+	private static long parseDropValue(String message)
+	{
+		Matcher m = DROP_VALUE.matcher(message);
+		return m.find() ? Long.parseLong(m.group(1).replace(",", "")) : -1;
 	}
 
 	private static String parseDropItem(String message)
@@ -1045,7 +1165,8 @@ public class DropMarketPlugin extends Plugin
 
 	private void updateBadge()
 	{
-		if (marketSource == null)
+		// LIVE ODDS (idle, or nothing worth betting on) shows the session timer; only a real market shows a count.
+		if (marketSource == null || LIVE_ODDS.equals(title))
 		{
 			badgeSkull = false;
 			badgeText = formatElapsed(ticks - loginTick);

@@ -21,9 +21,17 @@ final class BundledDropTables
 	private static final String RESOURCE = "wiki-drops.json";
 
 	private static Map<String, List<String>> tables;
+	private static Gson gson;
 
 	private BundledDropTables()
 	{
+	}
+
+	/** Uses the client's injected Gson (the plugin hub forbids creating fresh instances). */
+	static synchronized void configure(Gson injected)
+	{
+		gson = injected;
+		tables = null;
 	}
 
 	/** Rare drops for the monster ordered by wiki drop value, or null if the snapshot doesn't have it. */
@@ -39,6 +47,11 @@ final class BundledDropTables
 
 	private static Map<String, List<String>> load()
 	{
+		if (gson == null)
+		{
+			log.warn("Bundled drop tables not configured");
+			return Collections.emptyMap();
+		}
 		try (InputStream in = BundledDropTables.class.getResourceAsStream(RESOURCE))
 		{
 			if (in == null)
@@ -46,7 +59,7 @@ final class BundledDropTables
 				log.warn("Bundled drop tables missing");
 				return Collections.emptyMap();
 			}
-			Map<String, List<String>> parsed = new Gson().fromJson(
+			Map<String, List<String>> parsed = gson.fromJson(
 				new InputStreamReader(in, StandardCharsets.UTF_8),
 				new TypeToken<Map<String, List<String>>>() { }.getType());
 			return parsed == null ? Collections.emptyMap() : parsed;

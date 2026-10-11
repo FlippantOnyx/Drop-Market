@@ -6,6 +6,12 @@ import org.junit.Test;
 
 public class UniqueDropsTest
 {
+	static
+	{
+		BundledDropTables.configure(new com.google.gson.Gson());
+		UniqueDrops.configure(new com.google.gson.Gson());
+	}
+
 	@Test
 	public void collectionLogItemsFromAMonsterAreLogDrops()
 	{

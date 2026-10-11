@@ -7,42 +7,40 @@ import org.junit.Test;
 public class UniqueDropsTest
 {
 	@Test
-	public void rareCollectionLogItemsAreUniques()
+	public void collectionLogItemsFromAMonsterAreLogDrops()
 	{
-		assertTrue(UniqueDrops.isUnique("Zulrah", "Tanzanite fang"));
-		assertTrue(UniqueDrops.isUnique("Zulrah", "Serpentine visage"));
-		assertTrue(UniqueDrops.isUnique("Alchemical Hydra", "Hydra's claw"));
+		assertTrue(UniqueDrops.isLogDrop("Zulrah", "Tanzanite fang"));
+		assertTrue(UniqueDrops.isLogDrop("Zulrah", "Serpentine visage"));
+		assertTrue(UniqueDrops.isLogDrop("Alchemical Hydra", "Hydra's claw"));
 	}
 
 	@Test
-	public void handWrittenTableItemsAreUniques()
+	public void handWrittenTableItemsAreLogDrops()
 	{
-		assertTrue(UniqueDrops.isUnique("Chambers of Xeric", "Twisted bow"));
-		assertTrue(UniqueDrops.isUnique("Chambers of Xeric", "Olmlet"));
-		assertTrue(UniqueDrops.isUnique("Yama", "Soulflame horn"));
+		assertTrue(UniqueDrops.isLogDrop("Chambers of Xeric", "Twisted bow"));
+		assertTrue(UniqueDrops.isLogDrop("Chambers of Xeric", "Olmlet"));
+		assertTrue(UniqueDrops.isLogDrop("Yama", "Soulflame horn"));
 	}
 
 	@Test
-	public void bonesAndOtherNonLogDropsAreNotUniques()
+	public void bonesAndOtherNonLogDropsAreNotLogDrops()
 	{
-		assertFalse(UniqueDrops.isUnique("Alchemical Hydra", "Hydra bones"));
-		assertFalse(UniqueDrops.isUnique("Wyrm", "Wyrm bones"));
-		assertFalse(UniqueDrops.isUnique("Zulrah", "Zulrah's scales"));
-		assertFalse(UniqueDrops.isUnique("Zulrah", "Coins"));
+		assertFalse(UniqueDrops.isLogDrop("Alchemical Hydra", "Hydra bones"));
+		assertFalse(UniqueDrops.isLogDrop("Wyrm", "Wyrm bones"));
+		assertFalse(UniqueDrops.isLogDrop("Zulrah", "Coins"));
 	}
 
 	@Test
-	public void superCommonLogItemsAreNotUniques()
+	public void commonLogItemsAreStillLogDrops()
 	{
-		assertFalse(UniqueDrops.isUnique("Doom of Mokhaiotl", "Demon tear"));
-		assertFalse(UniqueDrops.isUnique("Chest (Barrows)", "Bolt rack"));
-		assertFalse(UniqueDrops.isUnique("Rewards Chest (Fortis Colosseum)", "Sunfire splinters"));
+		// Whether they win is the price check's job, not this list's.
+		assertTrue(UniqueDrops.isLogDrop("Doom of Mokhaiotl", "Demon tear"));
 	}
 
 	@Test
 	public void nullsAreNeverUnique()
 	{
-		assertFalse(UniqueDrops.isUnique(null, "Tanzanite fang"));
-		assertFalse(UniqueDrops.isUnique("Zulrah", null));
+		assertFalse(UniqueDrops.isLogDrop(null, "Tanzanite fang"));
+		assertFalse(UniqueDrops.isLogDrop("Zulrah", null));
 	}
 }

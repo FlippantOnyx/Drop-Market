@@ -646,8 +646,8 @@ public class DropMarketPlugin extends Plugin
 					long price = priceOf(item);
 					value = price == DropQualifier.NO_PRICE || price == DropQualifier.PRICES_NOT_LOADED ? -1 : price;
 				}
-				boolean unique = UniqueDrops.isUnique(currentSource(), item);
-				if (DropQualifier.valuableMessageQualifies(value, config.valuableDropThreshold(), unique,
+				boolean newLogItem = UniqueDrops.isLogDrop(currentSource(), item) && !clog.isObtained(item);
+				if (DropQualifier.valuableMessageQualifies(value, config.valuableDropThreshold(), newLogItem,
 					listStatusHere(item), config.popOffOnEveryDrop(), config.popOffMinValue()))
 				{
 					celebrateDrop(item);
@@ -1036,11 +1036,13 @@ public class DropMarketPlugin extends Plugin
 			// be betting on (e.g. landing Osmumten's fang while the market was showing Tumeken's shadow).
 			boolean onTable = tableContains(table, name);
 			boolean slot = clog.isSlot(name);
-			boolean unique = UniqueDrops.isUnique(marketSource, name);
+			boolean logDrop = UniqueDrops.isLogDrop(marketSource, name);
+			// A log item you haven't got yet opens a new collection log slot; repeats of common ones get price-checked.
+			boolean newLogItem = logDrop && !clog.isObtained(name);
 			boolean qualifies = DropQualifier.lootQualifies(price, config.valuableDropThreshold(), onTable, isTarget,
-				slot, unique, listStatus(marketSource, table, name), popOff, config.popOffMinValue());
+				slot, newLogItem, listStatus(marketSource, table, name), popOff, config.popOffMinValue());
 			// A table/target item with no market value is a collection log chase we haven't seen yet: learn it.
-			if (slot || ((isTarget || onTable) && price == DropQualifier.NO_PRICE))
+			if (slot || logDrop || ((isTarget || onTable) && price == DropQualifier.NO_PRICE))
 			{
 				clogChanged |= clog.record(name, true);
 			}

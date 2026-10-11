@@ -144,7 +144,7 @@ public class DropQualifierTest
 	}
 
 	@Test
-	public void uniqueDropOfThisMonsterCountsWhateverItIsWorth()
+	public void newLogItemCountsWhateverItIsWorth()
 	{
 		assertTrue(DropQualifier.lootQualifies(10, TWO_MIL, true, false, false, true, NONE, false, 0));
 		assertTrue(DropQualifier.lootQualifies(PRICES_NOT_LOADED, TWO_MIL, true, false, false, true, NONE, false, 0));
@@ -152,14 +152,24 @@ public class DropQualifierTest
 	}
 
 	@Test
-	public void uniqueCountsEvenWhenTheTableOmitsIt()
+	public void newLogItemCountsEvenWhenTheTableOmitsIt()
 	{
 		assertTrue(DropQualifier.lootQualifies(10, TWO_MIL, false, false, false, true, NONE, false, 0));
 	}
 
 	@Test
-	public void uniqueValuableMessageCountsUnderTheThreshold()
+	public void newLogItemValuableMessageCountsUnderTheThreshold()
 	{
 		assertTrue(DropQualifier.valuableMessageQualifies(4_400, TWO_MIL, true, NONE, false, 0));
+	}
+
+	@Test
+	public void repeatOfACommonLogItemIsPriceChecked()
+	{
+		// Not new to the log and under the threshold (demon tears, bolt racks...): not a win.
+		assertFalse(DropQualifier.lootQualifies(900, TWO_MIL, true, false, true, false, NONE, false, 0));
+		assertFalse(DropQualifier.valuableMessageQualifies(900, TWO_MIL, false, NONE, false, 0));
+		// ...unless it clears the threshold.
+		assertTrue(DropQualifier.lootQualifies(TWO_MIL, TWO_MIL, true, false, true, false, NONE, false, 0));
 	}
 }

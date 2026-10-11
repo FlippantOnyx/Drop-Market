@@ -46,11 +46,11 @@ final class DropQualifier
 		boolean chase = onTable || isTarget || clogSlot;
 		if (popOff)
 		{
-			return popOffMin <= 0 || price >= popOffMin || (unique && onTable) || (price == NO_PRICE && chase);
+			return popOffMin <= 0 || price >= popOffMin || unique || (price == NO_PRICE && chase);
 		}
-		if (unique && (onTable || isTarget))
+		if (unique)
 		{
-			// A unique drop of this very monster is a win whatever it's worth (or whether it's priced yet).
+			// A unique drop of this monster is a win whatever it's worth (or whether it's priced yet).
 			return true;
 		}
 		if (price == PRICES_NOT_LOADED)

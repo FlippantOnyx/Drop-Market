@@ -1,20 +1,36 @@
 package com.dropmarket;
 
+import com.google.gson.Gson;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import lombok.extern.slf4j.Slf4j;
 
 /**
- * Whether an item is a unique drop specific to a monster/activity: it's on that source's table and appears on at most
- * one other known table (e.g. both Nightmare variants share their uniques, but a rune 2h sword is on dozens).
+ * Whether an item is a "unique" drop of a monster/activity: a collection log item that isn't super common there
+ * (so Hydra bones or Demon tears don't count, a Tanzanite fang does). Backed by the bundled wiki snapshot, plus
+ * the hand-written tables, whose items are uniques by construction.
  */
+@Slf4j
 final class UniqueDrops
 {
-	private static final int MAX_OTHER_SOURCES = 1;
+	private static final String RESOURCE = "collection-log.json";
 
-	private static Map<String, Set<String>> sourcesByItem;
+	private static final class Data
+	{
+		List<String> items;
+		Map<String, List<String>> uniques;
+	}
+
+	private static Set<String> logItems;
+	private static Map<String, Set<String>> uniquesBySource;
 
 	private UniqueDrops()
 	{
@@ -26,31 +42,67 @@ final class UniqueDrops
 		{
 			return false;
 		}
-		if (sourcesByItem == null)
+		load();
+		String n = DropTables.normalize(item);
+		Set<String> rare = uniquesBySource.get(DropTables.normalize(source));
+		if (rare != null && rare.contains(n))
 		{
-			sourcesByItem = index();
+			return true;
 		}
-		Set<String> sources = sourcesByItem.get(DropTables.normalize(item));
-		String key = DropTables.normalize(source);
-		return sources != null && sources.contains(key) && sources.size() - 1 <= MAX_OTHER_SOURCES;
+		// Hand-written tables list only the notable uniques; they count when they're log items (or pets).
+		List<String> curated = DropTables.lookup(source);
+		return curated != null && (logItems.contains(n) || DropTables.isPet(item)) && contains(curated, n);
 	}
 
-	private static Map<String, Set<String>> index()
+	private static boolean contains(List<String> table, String normalizedItem)
 	{
-		Map<String, Set<String>> out = new HashMap<>();
-		add(out, DropTables.allTables());
-		add(out, BundledDropTables.all());
-		return out;
-	}
-
-	private static void add(Map<String, Set<String>> out, Map<String, List<String>> tables)
-	{
-		tables.forEach((source, items) ->
+		for (String entry : table)
 		{
-			for (String item : items)
+			if (DropTables.normalize(entry).equals(normalizedItem))
 			{
-				out.computeIfAbsent(DropTables.normalize(item), k -> new HashSet<>()).add(source);
+				return true;
 			}
-		});
+		}
+		return false;
+	}
+
+	private static void load()
+	{
+		if (logItems != null)
+		{
+			return;
+		}
+		logItems = new HashSet<>();
+		uniquesBySource = new HashMap<>();
+		try (InputStream in = UniqueDrops.class.getResourceAsStream(RESOURCE))
+		{
+			if (in == null)
+			{
+				log.warn("Bundled collection log data missing");
+				return;
+			}
+			Data data = new Gson().fromJson(new InputStreamReader(in, StandardCharsets.UTF_8), Data.class);
+			if (data == null)
+			{
+				return;
+			}
+			for (String item : data.items == null ? Collections.<String>emptyList() : data.items)
+			{
+				logItems.add(DropTables.normalize(item));
+			}
+			if (data.uniques != null)
+			{
+				data.uniques.forEach((source, items) ->
+				{
+					Set<String> set = new HashSet<>();
+					items.forEach(item -> set.add(DropTables.normalize(item)));
+					uniquesBySource.put(source, set);
+				});
+			}
+		}
+		catch (IOException | RuntimeException e)
+		{
+			log.warn("Bundled collection log data unreadable", e);
+		}
 	}
 }

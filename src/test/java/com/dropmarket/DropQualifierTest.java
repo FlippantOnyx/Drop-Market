@@ -152,9 +152,9 @@ public class DropQualifierTest
 	}
 
 	@Test
-	public void uniqueNeedsToBeOnTheTable()
+	public void uniqueCountsEvenWhenTheTableOmitsIt()
 	{
-		assertFalse(DropQualifier.lootQualifies(10, TWO_MIL, false, false, false, true, NONE, false, 0));
+		assertTrue(DropQualifier.lootQualifies(10, TWO_MIL, false, false, false, true, NONE, false, 0));
 	}
 
 	@Test

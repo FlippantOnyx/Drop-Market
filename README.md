@@ -12,7 +12,7 @@ A tiny, purely-for-fun overlay that turns your next big drop into a prediction-m
 - Pets get a rare chance of being featured too, logged or not.
 - Idle for a while and it resets back to LIVE ODDS.
 
-A drop only counts as a win if it's worth at least the **Valuable Drop Min Threshold** (2m by default). Items with no GE price — untradeable, or brand new content the GE hasn't priced yet — count if they're a real collection log chase, so new raid uniques work from day one.
+A drop only counts as a win if it's worth at least the **Valuable Drop Min Threshold** (2m by default). Items with no GE price — untradeable, or brand new content the GE hasn't priced yet — count if they're a real collection log chase, so new raid uniques work from day one. A unique drop of the monster you're fighting also counts whatever it's worth: any collection log item that isn't super common there (a Tanzanite fang, not Hydra bones or Demon tears).
 
 ## Settings
 

@@ -365,12 +365,6 @@ final class DropTables
 		return !RAIDS.contains(canonicalSource) || normalize(canonicalSource).equals(normalize(rawName));
 	}
 
-	/** Every hand-written table, keyed by normalized source. */
-	static Map<String, List<String>> allTables()
-	{
-		return Collections.unmodifiableMap(TABLES);
-	}
-
 	static List<String> lookup(String source)
 	{
 		List<String> table = TABLES.get(normalize(source));

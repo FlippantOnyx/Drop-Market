@@ -71,7 +71,6 @@ public class DropMarketPlugin extends Plugin
 	private static final int IDLE_TICKS = 50;
 	// Rock/tree respawns and moving between fishing spots leave bigger gaps than combat idling does.
 	private static final int SKILL_IDLE_TICKS = 150;
-	private static final int CELEBRATION_TICKS = 25;
 	private static final int VOLUME_POP_TICKS = 8;
 	private static final double VOLUME_POP_CHANCE = 0.3;
 	// Rolled once per PvM kill/attempt: a flat shot at the market featuring the pet instead of the usual
@@ -300,7 +299,7 @@ public class DropMarketPlugin extends Plugin
 		{
 			boolean sameMonster = source != null && source.equals(marketSource);
 			boolean differentMonster = source != null && !sameMonster;
-			if (differentMonster || (ticks - resolvedTick >= CELEBRATION_TICKS && !sameMonster))
+			if (differentMonster || (ticks - resolvedTick >= celebrationTicks() && !sameMonster))
 			{
 				resolved = false;
 				personalOverride = false;
@@ -370,6 +369,12 @@ public class DropMarketPlugin extends Plugin
 				}
 			}
 		}
+	}
+
+	/** How long a win stays up, from the Celebration Seconds setting (a game tick is 0.6s). */
+	private int celebrationTicks()
+	{
+		return (int) Math.round(config.celebrationSeconds() / 0.6);
 	}
 
 	private String recentSource()
@@ -635,16 +640,25 @@ public class DropMarketPlugin extends Plugin
 				long value = parseDropValue(raw);
 				if (value < 0)
 				{
-					value = priceOf(item);
+					long price = priceOf(item);
+					value = price == DropQualifier.NO_PRICE || price == DropQualifier.PRICES_NOT_LOADED ? -1 : price;
 				}
-				celebrateDrop(item, value >= config.valuableDropThreshold() && !isBlacklistedHere(item));
+				if (DropQualifier.valuableMessageQualifies(value, config.valuableDropThreshold(), isBlacklistedHere(item),
+					config.popOffOnEveryDrop(), config.popOffMinValue()))
+				{
+					celebrateDrop(item);
+				}
 			}
 			else if (raw.regionMatches(true, 0, "Untradeable drop:", 0, 17))
 			{
-				// Only untradeables that are real chases count, not every untradeable the game announces.
+				// Only real chases count, not every untradeable the game announces.
 				String item = parseDropItem(raw);
-				celebrateDrop(item,
-					(clog.isSlot(item) || tableContains(currentTable(), item)) && !isBlacklistedHere(item));
+				List<String> table = currentTable();
+				if (DropQualifier.untradeableMessageQualifies(clog.isSlot(item), tableContains(table, item), table == null,
+					isBlacklistedHere(item), config.popOffOnEveryDrop()))
+				{
+					celebrateDrop(item);
+				}
 			}
 		}
 
@@ -812,7 +826,7 @@ public class DropMarketPlugin extends Plugin
 	/** Returns null when nothing is worth betting on, which shows LIVE ODDS. */
 	private String chooseItem(String source)
 	{
-		List<String> table = DropTables.lookup(source);
+		List<String> table = knownTable(source);
 		List<String> priorityList = priorities.get(DropTables.normalize(source));
 		if (priorityList != null && !priorityList.isEmpty())
 		{
@@ -839,28 +853,43 @@ public class DropMarketPlugin extends Plugin
 			return GUARD_ITEM;
 		}
 
-		boolean fromWiki = false;
+		// Anything not hand-curated came from the wiki (bundled snapshot or the opt-in live lookup).
+		boolean fromWiki = DropTables.lookup(source) == null;
 		if (table == null && config.wikiLookup())
 		{
-			table = wiki.getCached(source);
-			fromWiki = true;
-			if (table == null)
+			wiki.fetch(source, drops ->
 			{
-				wiki.fetch(source, drops ->
+				if (source.equals(marketSource) && marketItem == null && !resolved)
 				{
-					if (source.equals(marketSource) && marketItem == null && !resolved)
-					{
-						marketItem = pickItem(source, drops, true);
-						updateTitle();
-					}
-				});
-			}
+					marketItem = pickItem(source, drops, true);
+					updateTitle();
+				}
+			});
 		}
 		if (!pricesLoaded())
 		{
 			pickedWithoutPrices = true;
 		}
 		return table == null ? null : pickItem(source, table, fromWiki);
+	}
+
+	/** Curated table, else the bundled wiki snapshot, else (opt-in) a live-fetched one; null if none known. */
+	private List<String> knownTable(String source)
+	{
+		if (source == null)
+		{
+			return null;
+		}
+		List<String> table = DropTables.lookup(source);
+		if (table == null)
+		{
+			table = BundledDropTables.lookup(source);
+		}
+		if (table == null && config.wikiLookup())
+		{
+			table = wiki.getCached(source);
+		}
+		return table;
 	}
 
 	/** True if "Source: Item" is on the blacklist; the table lets loose entries like "dex scroll" match. */
@@ -924,7 +953,7 @@ public class DropMarketPlugin extends Plugin
 		return !itemManager.search("Coins").isEmpty();
 	}
 
-	/** GE price, or -1 if the item isn't on the GE (untradeable). */
+	/** GE price, {@link DropQualifier#NO_PRICE} if it has none, or {@link DropQualifier#PRICES_NOT_LOADED}. */
 	private long priceOf(String name)
 	{
 		String key = name.toLowerCase();
@@ -935,9 +964,9 @@ public class DropMarketPlugin extends Plugin
 		}
 		if (!pricesLoaded())
 		{
-			return -1;
+			return DropQualifier.PRICES_NOT_LOADED;
 		}
-		long price = -1;
+		long price = DropQualifier.NO_PRICE;
 		for (ItemPrice ip : itemManager.search(name))
 		{
 			if (ip.getName().equalsIgnoreCase(name))
@@ -962,71 +991,70 @@ public class DropMarketPlugin extends Plugin
 
 	private void checkLoot(Collection<ItemStack> items)
 	{
-		boolean hit = false;
 		boolean clogChanged = false;
-		String popItem = null;
-		long popPrice = Long.MIN_VALUE;
-		List<String> table = marketSource == null ? null : DropTables.lookup(marketSource);
+		boolean popOff = config.popOffOnEveryDrop();
+		String hitItem = null;
+		boolean hitOnTable = false;
+		long hitPrice = Long.MIN_VALUE;
+		List<String> table = knownTable(marketSource);
 		for (ItemStack stack : items)
 		{
 			String name = itemManager.getItemComposition(itemManager.canonicalize(stack.getId())).getName();
-			long stackPrice = priceOf(name);
-			if (stackPrice > popPrice)
-			{
-				popItem = name;
-				popPrice = stackPrice;
-			}
+			long price = priceOf(name);
 			boolean isTarget = marketItem != null && matchesMarketItem(name);
 			// Any item from the monster/event's own notable table is worth celebrating - even one
 			// already in the collection log - not just whichever single item the market happened to
 			// be betting on (e.g. landing Osmumten's fang while the market was showing Tumeken's shadow).
-			boolean isTableDrop = !isTarget && !resolved && table != null && tableContains(table, name);
-			// Blacklisted items never count, and a tradeable drop must clear the valuable-drop threshold.
-			long price = priceOf(name);
-			if (isBlacklisted(marketSource, table, name) || (price >= 0 && price < config.valuableDropThreshold()))
-			{
-				isTarget = false;
-				isTableDrop = false;
-			}
-			if (clog.isSlot(name) || ((isTarget || isTableDrop) && price < 0))
+			boolean onTable = tableContains(table, name);
+			boolean slot = clog.isSlot(name);
+			boolean qualifies = DropQualifier.lootQualifies(price, config.valuableDropThreshold(), onTable, isTarget,
+				slot, isBlacklisted(marketSource, table, name), popOff, config.popOffMinValue());
+			// A table/target item with no market value is a collection log chase we haven't seen yet: learn it.
+			if (slot || ((isTarget || onTable) && price == DropQualifier.NO_PRICE))
 			{
 				clogChanged |= clog.record(name, true);
 			}
-			if (isTableDrop)
+			if (qualifies && price > hitPrice)
 			{
-				marketItem = name;
+				hitItem = name;
+				hitOnTable = onTable || isTarget;
+				hitPrice = price;
 			}
-			hit |= isTarget || isTableDrop;
 		}
 		if (clogChanged)
 		{
 			clog.flush();
 		}
-		if (config.popOffOnEveryDrop() && popItem != null)
+		if (hitItem == null)
 		{
-			celebrateDrop(popItem, true);
+			return;
 		}
-		else if (hit && !resolved)
+		if (popOff)
 		{
-			resolve();
+			celebrateDrop(hitItem);
+		}
+		else if (!resolved)
+		{
+			if (marketSource != null && hitOnTable)
+			{
+				marketItem = matchesMarketItem(hitItem) ? marketItem : hitItem;
+				resolve();
+			}
+			else
+			{
+				celebrate(hitItem);
+			}
 		}
 	}
 
-	/** Celebrates a drop announced in chat; with Pop Off on Every Drop it always qualifies. */
-	private void celebrateDrop(String item, boolean qualifies)
+	/** Celebrates a drop that already qualified; with Pop Off a loot event and its chat message count once. */
+	private void celebrateDrop(String item)
 	{
-		if (config.popOffOnEveryDrop())
+		if (config.popOffOnEveryDrop() && resolved && resolvedTick == ticks)
 		{
-			// Loot events and chat messages for the same drop land on the same tick; celebrate once.
-			if (!(resolved && resolvedTick == ticks))
-			{
-				celebrate(item);
-			}
+			return;
 		}
-		else if (qualifies)
-		{
-			celebrate(item);
-		}
+		celebrate(item);
 	}
 
 	private static boolean tableContains(List<String> table, String itemName)
@@ -1085,7 +1113,7 @@ public class DropMarketPlugin extends Plugin
 	private List<String> currentTable()
 	{
 		String source = currentSource();
-		return source == null ? null : DropTables.lookup(source);
+		return knownTable(source);
 	}
 
 	private boolean isBlacklistedHere(String item)

@@ -17,21 +17,27 @@ final class DropQualifier
 
 	/**
 	 * A received item. Pop Off counts everything (down to its minimum value); otherwise blacklisted items never
-	 * count, before prices load only a collection log slot counts, an unpriced item counts when it's a known chase (on the table, the market's own target, or a
-	 * collection log slot) since it can't be judged on value, and a priced item must be on the table or be the
-	 * target and clear the valuable-drop threshold.
+	 * count, a unique drop of this monster always counts, before prices load only a collection log slot counts,
+	 * an unpriced item counts when it's a known chase (on the table, the market's own target, or a collection log
+	 * slot) since it can't be judged on value, and a priced item must be on the table or be the target and clear
+	 * the valuable-drop threshold.
 	 */
 	static boolean lootQualifies(long price, long threshold, boolean onTable, boolean isTarget, boolean clogSlot,
-		boolean blacklisted, boolean popOff, long popOffMin)
+		boolean unique, boolean blacklisted, boolean popOff, long popOffMin)
 	{
 		boolean chase = onTable || isTarget || clogSlot;
 		if (popOff)
 		{
-			return popOffMin <= 0 || price >= popOffMin || (price == NO_PRICE && chase);
+			return popOffMin <= 0 || price >= popOffMin || (unique && onTable) || (price == NO_PRICE && chase);
 		}
 		if (blacklisted)
 		{
 			return false;
+		}
+		if (unique && (onTable || isTarget))
+		{
+			// A unique drop of this very monster is a win whatever it's worth (or whether it's priced yet).
+			return true;
 		}
 		if (price == PRICES_NOT_LOADED)
 		{
@@ -46,15 +52,15 @@ final class DropQualifier
 	}
 
 	/** The game's "Valuable drop" chat message; {@code value} is negative when it couldn't be determined. */
-	static boolean valuableMessageQualifies(long value, long threshold, boolean blacklisted, boolean popOff,
-		long popOffMin)
+	static boolean valuableMessageQualifies(long value, long threshold, boolean unique, boolean blacklisted,
+		boolean popOff, long popOffMin)
 	{
 		if (popOff)
 		{
 			return popOffMin <= 0 || value < 0 || value >= popOffMin;
 		}
 		// The game flagged it as valuable but we can't price it (a brand new item): trust the game.
-		return !blacklisted && (value < 0 || value >= threshold);
+		return !blacklisted && (unique || value < 0 || value >= threshold);
 	}
 
 	/**

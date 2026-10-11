@@ -12,7 +12,7 @@ public class DropQualifierTest
 
 	private static boolean loot(long price, boolean onTable, boolean isTarget, boolean slot, boolean blacklisted)
 	{
-		return DropQualifier.lootQualifies(price, TWO_MIL, onTable, isTarget, slot, blacklisted, false, 0);
+		return DropQualifier.lootQualifies(price, TWO_MIL, onTable, isTarget, slot, false, blacklisted, false, 0);
 	}
 
 	@Test
@@ -73,37 +73,37 @@ public class DropQualifierTest
 	public void valuableMessageCountsBeforePricesLoad()
 	{
 		// No value could be looked up (-1), but the game itself flagged the drop as valuable.
-		assertTrue(DropQualifier.valuableMessageQualifies(-1, TWO_MIL, false, false, 0));
+		assertTrue(DropQualifier.valuableMessageQualifies(-1, TWO_MIL, false, false, false, 0));
 	}
 
 	@Test
 	public void popOffCountsEverythingByDefaultEvenBlacklisted()
 	{
-		assertTrue(DropQualifier.lootQualifies(10, TWO_MIL, false, false, false, true, true, 0));
-		assertTrue(DropQualifier.lootQualifies(PRICES_NOT_LOADED, TWO_MIL, false, false, false, false, true, 0));
+		assertTrue(DropQualifier.lootQualifies(10, TWO_MIL, false, false, false, false, true, true, 0));
+		assertTrue(DropQualifier.lootQualifies(PRICES_NOT_LOADED, TWO_MIL, false, false, false, false, false, true, 0));
 	}
 
 	@Test
 	public void popOffMinValueFiltersCheapDropsButKeepsUnpricedChases()
 	{
-		assertFalse(DropQualifier.lootQualifies(500, TWO_MIL, true, false, false, false, true, 1_000));
-		assertTrue(DropQualifier.lootQualifies(1_000, TWO_MIL, false, false, false, false, true, 1_000));
-		assertTrue(DropQualifier.lootQualifies(NO_PRICE, TWO_MIL, false, false, true, false, true, 1_000));
-		assertFalse(DropQualifier.lootQualifies(NO_PRICE, TWO_MIL, false, false, false, false, true, 1_000));
+		assertFalse(DropQualifier.lootQualifies(500, TWO_MIL, true, false, false, false, false, true, 1_000));
+		assertTrue(DropQualifier.lootQualifies(1_000, TWO_MIL, false, false, false, false, false, true, 1_000));
+		assertTrue(DropQualifier.lootQualifies(NO_PRICE, TWO_MIL, false, false, true, false, false, true, 1_000));
+		assertFalse(DropQualifier.lootQualifies(NO_PRICE, TWO_MIL, false, false, false, false, false, true, 1_000));
 	}
 
 	@Test
 	public void valuableMessageRespectsThresholdAndBlacklist()
 	{
-		assertFalse(DropQualifier.valuableMessageQualifies(4_400, TWO_MIL, false, false, 0));
-		assertTrue(DropQualifier.valuableMessageQualifies(TWO_MIL, TWO_MIL, false, false, 0));
-		assertFalse(DropQualifier.valuableMessageQualifies(TWO_MIL, TWO_MIL, true, false, 0));
+		assertFalse(DropQualifier.valuableMessageQualifies(4_400, TWO_MIL, false, false, false, 0));
+		assertTrue(DropQualifier.valuableMessageQualifies(TWO_MIL, TWO_MIL, false, false, false, 0));
+		assertFalse(DropQualifier.valuableMessageQualifies(TWO_MIL, TWO_MIL, false, true, false, 0));
 	}
 
 	@Test
 	public void valuableMessageForUnpriceableItemIsTrusted()
 	{
-		assertTrue(DropQualifier.valuableMessageQualifies(-1, TWO_MIL, false, false, 0));
+		assertTrue(DropQualifier.valuableMessageQualifies(-1, TWO_MIL, false, false, false, 0));
 	}
 
 	@Test
@@ -121,5 +121,32 @@ public class DropQualifierTest
 	public void untradeableMessageUnderPopOffAlwaysCounts()
 	{
 		assertTrue(DropQualifier.untradeableMessageQualifies(false, false, false, true, true));
+	}
+
+	@Test
+	public void uniqueDropOfThisMonsterCountsWhateverItIsWorth()
+	{
+		assertTrue(DropQualifier.lootQualifies(10, TWO_MIL, true, false, false, true, false, false, 0));
+		assertTrue(DropQualifier.lootQualifies(PRICES_NOT_LOADED, TWO_MIL, true, false, false, true, false, false, 0));
+		assertTrue(DropQualifier.lootQualifies(NO_PRICE, TWO_MIL, true, false, false, true, false, false, 0));
+	}
+
+	@Test
+	public void uniqueStillLosesToTheBlacklist()
+	{
+		assertFalse(DropQualifier.lootQualifies(50_000_000, TWO_MIL, true, false, false, true, true, false, 0));
+		assertFalse(DropQualifier.valuableMessageQualifies(50_000_000, TWO_MIL, true, true, false, 0));
+	}
+
+	@Test
+	public void uniqueNeedsToBeOnTheTable()
+	{
+		assertFalse(DropQualifier.lootQualifies(10, TWO_MIL, false, false, false, true, false, false, 0));
+	}
+
+	@Test
+	public void uniqueValuableMessageCountsUnderTheThreshold()
+	{
+		assertTrue(DropQualifier.valuableMessageQualifies(4_400, TWO_MIL, true, false, false, 0));
 	}
 }

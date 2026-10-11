@@ -2,7 +2,8 @@ package com.dropmarket;
 
 /**
  * Decides whether a drop counts as a success on the odds. Pure logic, kept separate from the plugin so every
- * rule (threshold, blacklist, pop-off, unpriced collection log items) can be tested without a client.
+ * rule (blacklist, priority, threshold, pop-off, unique and unpriced collection log items) can be tested without
+ * a client.
  */
 final class DropQualifier
 {
@@ -11,28 +12,41 @@ final class DropQualifier
 	/** The price data hasn't loaded yet, so the item's value can't be judged. */
 	static final long PRICES_NOT_LOADED = -2;
 
+	/** Where an item sits on the user's lists. A blacklisted item stays blacklisted even if it's also a priority. */
+	enum ListStatus
+	{
+		NONE,
+		PRIORITY,
+		BLACKLISTED
+	}
+
 	private DropQualifier()
 	{
 	}
 
 	/**
-	 * A received item. Pop Off counts everything (down to its minimum value); otherwise blacklisted items never
-	 * count, a unique drop of this monster always counts, before prices load only a collection log slot counts,
+	 * A received item. The lists trump everything: a blacklisted item never counts (not even under Pop Off), and a
+	 * priority item always counts, whatever it's worth. Otherwise Pop Off counts everything (down to its minimum
+	 * value); a unique drop of this monster always counts; before prices load only a collection log slot counts;
 	 * an unpriced item counts when it's a known chase (on the table, the market's own target, or a collection log
-	 * slot) since it can't be judged on value, and a priced item must be on the table or be the target and clear
-	 * the valuable-drop threshold.
+	 * slot) since it can't be judged on value; and a priced item must be on the table or be the target and clear the
+	 * valuable-drop threshold.
 	 */
 	static boolean lootQualifies(long price, long threshold, boolean onTable, boolean isTarget, boolean clogSlot,
-		boolean unique, boolean blacklisted, boolean popOff, long popOffMin)
+		boolean unique, ListStatus list, boolean popOff, long popOffMin)
 	{
+		if (list == ListStatus.BLACKLISTED)
+		{
+			return false;
+		}
+		if (list == ListStatus.PRIORITY)
+		{
+			return true;
+		}
 		boolean chase = onTable || isTarget || clogSlot;
 		if (popOff)
 		{
 			return popOffMin <= 0 || price >= popOffMin || (unique && onTable) || (price == NO_PRICE && chase);
-		}
-		if (blacklisted)
-		{
-			return false;
 		}
 		if (unique && (onTable || isTarget))
 		{
@@ -52,15 +66,19 @@ final class DropQualifier
 	}
 
 	/** The game's "Valuable drop" chat message; {@code value} is negative when it couldn't be determined. */
-	static boolean valuableMessageQualifies(long value, long threshold, boolean unique, boolean blacklisted,
+	static boolean valuableMessageQualifies(long value, long threshold, boolean unique, ListStatus list,
 		boolean popOff, long popOffMin)
 	{
+		if (list != ListStatus.NONE)
+		{
+			return list == ListStatus.PRIORITY;
+		}
 		if (popOff)
 		{
-			return popOffMin <= 0 || value < 0 || value >= popOffMin;
+			return popOffMin <= 0 || value < 0 || value >= popOffMin || unique;
 		}
 		// The game flagged it as valuable but we can't price it (a brand new item): trust the game.
-		return !blacklisted && (unique || value < 0 || value >= threshold);
+		return unique || value < 0 || value >= threshold;
 	}
 
 	/**
@@ -68,8 +86,24 @@ final class DropQualifier
 	 * source with no known table at all - e.g. brand new content); other untradeables the game announces don't.
 	 */
 	static boolean untradeableMessageQualifies(boolean clogSlot, boolean onTable, boolean sourceHasNoTable,
-		boolean blacklisted, boolean popOff)
+		ListStatus list, boolean popOff)
 	{
-		return popOff || (!blacklisted && (clogSlot || onTable || sourceHasNoTable));
+		if (list != ListStatus.NONE)
+		{
+			return list == ListStatus.PRIORITY;
+		}
+		return popOff || clogSlot || onTable || sourceHasNoTable;
+	}
+
+	/** The game's collection log message: always a win unless the item is blacklisted. */
+	static boolean collectionLogMessageQualifies(ListStatus list)
+	{
+		return list != ListStatus.BLACKLISTED;
+	}
+
+	/** Whether the market's own chat-message resolution (pet, named-item messages) may fire for this item. */
+	static boolean marketMessageQualifies(ListStatus list)
+	{
+		return list != ListStatus.BLACKLISTED;
 	}
 }

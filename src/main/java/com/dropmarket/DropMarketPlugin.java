@@ -631,7 +631,10 @@ public class DropMarketPlugin extends Plugin
 			{
 				String item = raw.substring(CLOG_MESSAGE.length()).trim();
 				clog.recordAndFlush(item, true);
-				celebrate(item);
+				if (DropQualifier.collectionLogMessageQualifies(listStatusHere(item)))
+				{
+					celebrate(item);
+				}
 			}
 			else if (raw.regionMatches(true, 0, "Valuable drop:", 0, 14))
 			{
@@ -645,7 +648,7 @@ public class DropMarketPlugin extends Plugin
 				}
 				boolean unique = tableContains(currentTable(), item) && UniqueDrops.isUnique(currentSource(), item);
 				if (DropQualifier.valuableMessageQualifies(value, config.valuableDropThreshold(), unique,
-					isBlacklistedHere(item), config.popOffOnEveryDrop(), config.popOffMinValue()))
+					listStatusHere(item), config.popOffOnEveryDrop(), config.popOffMinValue()))
 				{
 					celebrateDrop(item);
 				}
@@ -656,7 +659,7 @@ public class DropMarketPlugin extends Plugin
 				String item = parseDropItem(raw);
 				List<String> table = currentTable();
 				if (DropQualifier.untradeableMessageQualifies(clog.isSlot(item), tableContains(table, item), table == null,
-					isBlacklistedHere(item), config.popOffOnEveryDrop()))
+					listStatusHere(item), config.popOffOnEveryDrop()))
 				{
 					celebrateDrop(item);
 				}
@@ -664,6 +667,11 @@ public class DropMarketPlugin extends Plugin
 		}
 
 		if (marketItem == null || resolved)
+		{
+			return;
+		}
+
+		if (!DropQualifier.marketMessageQualifies(listStatus(marketSource, knownTable(marketSource), marketItem)))
 		{
 			return;
 		}
@@ -896,13 +904,33 @@ public class DropMarketPlugin extends Plugin
 	/** True if "Source: Item" is on the blacklist; the table lets loose entries like "dex scroll" match. */
 	private boolean isBlacklisted(String source, List<String> table, String item)
 	{
-		List<String> banned = source == null ? null : blacklist.get(DropTables.normalize(source));
-		if (banned == null)
+		return onList(blacklist, source, table, item);
+	}
+
+	/** Blacklist beats priority; a priority item is always a win, a blacklisted one never is. */
+	private DropQualifier.ListStatus listStatus(String source, List<String> table, String item)
+	{
+		if (item == null)
+		{
+			return DropQualifier.ListStatus.NONE;
+		}
+		if (isBlacklisted(source, table, item))
+		{
+			return DropQualifier.ListStatus.BLACKLISTED;
+		}
+		return onList(priorities, source, table, item) ? DropQualifier.ListStatus.PRIORITY
+			: DropQualifier.ListStatus.NONE;
+	}
+
+	private static boolean onList(Map<String, List<String>> list, String source, List<String> table, String item)
+	{
+		List<String> entries = source == null ? null : list.get(DropTables.normalize(source));
+		if (entries == null)
 		{
 			return false;
 		}
 		String n = DropTables.normalize(item);
-		for (String entry : banned)
+		for (String entry : entries)
 		{
 			if (DropTables.normalize(DropTables.matchItem(entry, table)).equals(n))
 			{
@@ -1010,7 +1038,7 @@ public class DropMarketPlugin extends Plugin
 			boolean slot = clog.isSlot(name);
 			boolean unique = onTable && UniqueDrops.isUnique(marketSource, name);
 			boolean qualifies = DropQualifier.lootQualifies(price, config.valuableDropThreshold(), onTable, isTarget,
-				slot, unique, isBlacklisted(marketSource, table, name), popOff, config.popOffMinValue());
+				slot, unique, listStatus(marketSource, table, name), popOff, config.popOffMinValue());
 			// A table/target item with no market value is a collection log chase we haven't seen yet: learn it.
 			if (slot || ((isTarget || onTable) && price == DropQualifier.NO_PRICE))
 			{
@@ -1118,9 +1146,9 @@ public class DropMarketPlugin extends Plugin
 		return knownTable(source);
 	}
 
-	private boolean isBlacklistedHere(String item)
+	private DropQualifier.ListStatus listStatusHere(String item)
 	{
-		return isBlacklisted(currentSource(), currentTable(), item);
+		return listStatus(currentSource(), currentTable(), item);
 	}
 
 	/** Coin value from "(1,234 coins)" in a drop message, or -1 if it isn't there. */

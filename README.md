@@ -18,7 +18,7 @@ A drop only counts as a win if it's worth at least the **Valuable Drop Min Thres
 
 - Colors for both lines, both header bars, and their text
 - A second, independently-moving line and a second header bar, each optional
-- **Priority drops** to bet on instead of the default pick, and a **blacklist** of drops to never bet on or celebrate (`Source: Item` per line)
+- **Priority drops** (always a win, and bet on instead of the default pick) and a **blacklist** (never bet on or celebrated; trumps everything) (`Source: Item` per line)
 - **Valuable Drop Min Threshold** (what counts as a win) and **Lowest Value GP From Monster** (which monsters get a market)
 - **Flash On Drop**, **Celebration Seconds**, and **Pop Off on Every Drop** (every drop is a win, optionally above a minimum value)
 - Optional RuneProfile sync, and optional live OSRS Wiki lookups for monsters missing from the bundled tables

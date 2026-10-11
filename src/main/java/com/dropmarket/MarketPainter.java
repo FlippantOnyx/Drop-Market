@@ -49,7 +49,7 @@ final class MarketPainter
 		Graphics2D g = (Graphics2D) graphics.create();
 		try
 		{
-			boolean flashOn = resolved && (nowTick / FLASH_PERIOD_TICKS) % 2 == 0;
+			boolean flashOn = resolved && config.flashOnDrop() && (nowTick / FLASH_PERIOD_TICKS) % 2 == 0;
 			Color lineColor = config.graphColor();
 			Color accent = flashOn ? RAID_PURPLE : lineColor;
 			MarketGraph secondLine = config.showDualLine() ? polyGraph : null;

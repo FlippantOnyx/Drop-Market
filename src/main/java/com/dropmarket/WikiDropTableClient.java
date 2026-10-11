@@ -29,11 +29,22 @@ import okhttp3.ResponseBody;
 class WikiDropTableClient
 {
 	private static final HttpUrl API = HttpUrl.get("https://oldschool.runescape.wiki/api.php");
+	// Only the most recently used activities are kept, so a session never grows or re-asks for the same monster.
+	private static final int MAX_CACHED = 50;
+	// A failed lookup is retried after a while instead of being stuck empty for the whole session.
+	private static final long FAILURE_RETRY_MS = 10 * 60 * 1000L;
 
 	private final OkHttpClient http;
 	private final Gson gson;
 	private final ClientThread clientThread;
-	private final Map<String, List<String>> cache = new ConcurrentHashMap<>();
+	private final Map<String, CachedDrops> cache = new LinkedHashMap<String, CachedDrops>(16, 0.75f, true)
+	{
+		@Override
+		protected boolean removeEldestEntry(Map.Entry<String, CachedDrops> eldest)
+		{
+			return size() > MAX_CACHED;
+		}
+	};
 	private final Map<String, Boolean> inFlight = new ConcurrentHashMap<>();
 
 	@Inject
@@ -44,16 +55,46 @@ class WikiDropTableClient
 		this.clientThread = clientThread;
 	}
 
-	/** Cached rare drops for the monster, ordered by wiki drop value; null if not fetched yet. */
+	private static final class CachedDrops
+	{
+		final List<String> drops;
+		final long expiresAt;
+
+		CachedDrops(List<String> drops, long expiresAt)
+		{
+			this.drops = drops;
+			this.expiresAt = expiresAt;
+		}
+	}
+
+	/** Cached rare drops for the monster, ordered by wiki drop value; null if not fetched (or expired). */
 	List<String> getCached(String monster)
 	{
-		return cache.get(DropTables.normalize(monster));
+		return lookup(DropTables.normalize(monster));
+	}
+
+	private List<String> lookup(String key)
+	{
+		synchronized (cache)
+		{
+			CachedDrops entry = cache.get(key);
+			if (entry == null)
+			{
+				return null;
+			}
+			if (System.currentTimeMillis() >= entry.expiresAt)
+			{
+				cache.remove(key);
+				return null;
+			}
+			return entry.drops;
+		}
 	}
 
 	void fetch(String monster, Consumer<List<String>> onClientThread)
 	{
 		String key = DropTables.normalize(monster);
-		if (cache.containsKey(key) || inFlight.putIfAbsent(key, Boolean.TRUE) != null)
+		if (lookup(key) != null || inFlight.putIfAbsent(key, Boolean.TRUE) != null)
 		{
 			return;
 		}
@@ -72,32 +113,38 @@ class WikiDropTableClient
 			public void onFailure(Call call, IOException e)
 			{
 				log.debug("Wiki drop lookup failed for {}", monster, e);
-				finish(key, Collections.emptyList(), onClientThread);
+				finish(key, Collections.emptyList(), false, onClientThread);
 			}
 
 			@Override
 			public void onResponse(Call call, Response response)
 			{
 				List<String> drops = Collections.emptyList();
+				boolean ok = false;
 				try (ResponseBody body = response.body())
 				{
 					if (response.isSuccessful() && body != null)
 					{
 						drops = parse(body.string());
+						ok = true;
 					}
 				}
 				catch (Exception e)
 				{
 					log.debug("Wiki drop parse failed for {}", monster, e);
 				}
-				finish(key, drops, onClientThread);
+				finish(key, drops, ok, onClientThread);
 			}
 		});
 	}
 
-	private void finish(String key, List<String> drops, Consumer<List<String>> onClientThread)
+	private void finish(String key, List<String> drops, boolean ok, Consumer<List<String>> onClientThread)
 	{
-		cache.put(key, drops);
+		long expiresAt = ok ? Long.MAX_VALUE : System.currentTimeMillis() + FAILURE_RETRY_MS;
+		synchronized (cache)
+		{
+			cache.put(key, new CachedDrops(drops, expiresAt));
+		}
 		inFlight.remove(key);
 		clientThread.invoke(() -> onClientThread.accept(drops));
 	}

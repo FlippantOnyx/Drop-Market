@@ -17,7 +17,7 @@ final class DropQualifier
 
 	/**
 	 * A received item. Pop Off counts everything (down to its minimum value); otherwise blacklisted items never
-	 * count, an unpriced item counts when it's a known chase (on the table, the market's own target, or a
+	 * count, before prices load only a collection log slot counts, an unpriced item counts when it's a known chase (on the table, the market's own target, or a
 	 * collection log slot) since it can't be judged on value, and a priced item must be on the table or be the
 	 * target and clear the valuable-drop threshold.
 	 */
@@ -29,9 +29,14 @@ final class DropQualifier
 		{
 			return popOffMin <= 0 || price >= popOffMin || (price == NO_PRICE && chase);
 		}
-		if (blacklisted || price == PRICES_NOT_LOADED)
+		if (blacklisted)
 		{
 			return false;
+		}
+		if (price == PRICES_NOT_LOADED)
+		{
+			// Value can't be judged yet, but a collection log slot is a chase regardless of price.
+			return clogSlot;
 		}
 		if (price == NO_PRICE)
 		{

@@ -62,9 +62,18 @@ public class DropQualifierTest
 	}
 
 	@Test
-	public void nothingCountsBeforePricesLoad()
+	public void beforePricesLoadOnlyCollectionLogSlotsCount()
 	{
-		assertFalse(loot(PRICES_NOT_LOADED, true, true, true, false));
+		assertFalse(loot(PRICES_NOT_LOADED, true, true, false, false));
+		assertTrue(loot(PRICES_NOT_LOADED, false, false, true, false));
+		assertFalse(loot(PRICES_NOT_LOADED, false, false, true, true));
+	}
+
+	@Test
+	public void valuableMessageCountsBeforePricesLoad()
+	{
+		// No value could be looked up (-1), but the game itself flagged the drop as valuable.
+		assertTrue(DropQualifier.valuableMessageQualifies(-1, TWO_MIL, false, false, 0));
 	}
 
 	@Test

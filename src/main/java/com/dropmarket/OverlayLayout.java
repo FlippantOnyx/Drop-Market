@@ -1,7 +1,7 @@
 package com.dropmarket;
 
 /** How much of the market the overlay shows: the full card, a two-row card, or a single-line ticker. */
-enum OverlayLayout
+public enum OverlayLayout
 {
 	FULL("Full"),
 	COMPACT("Compact"),

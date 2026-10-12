@@ -3,7 +3,7 @@ package com.dropmarket;
 import net.runelite.api.SoundEffectID;
 
 /** Built-in game sounds that can play on a win (no audio files are bundled; volume follows the game's sound effects). */
-enum WinSound
+public enum WinSound
 {
 	OFF("Off", -1),
 	COIN_TINKLE("Coin tinkle", SoundEffectID.GE_COIN_TINKLE),

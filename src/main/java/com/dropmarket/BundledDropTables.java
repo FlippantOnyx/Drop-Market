@@ -9,6 +9,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import javax.inject.Inject;
+import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -16,26 +18,22 @@ import lombok.extern.slf4j.Slf4j;
  * tools/generate-wiki-drops.mjs before each release), so no network request or opt-in is needed for them.
  */
 @Slf4j
-final class BundledDropTables
+@Singleton
+class BundledDropTables
 {
 	private static final String RESOURCE = "wiki-drops.json";
 
-	private static Map<String, List<String>> tables;
-	private static Gson gson;
+	private final Gson gson;
+	private Map<String, List<String>> tables;
 
-	private BundledDropTables()
+	@Inject
+	BundledDropTables(Gson gson)
 	{
-	}
-
-	/** Uses the client's injected Gson (the plugin hub forbids creating fresh instances). */
-	static synchronized void configure(Gson injected)
-	{
-		gson = injected;
-		tables = null;
+		this.gson = gson;
 	}
 
 	/** Rare drops for the monster ordered by wiki drop value, or null if the snapshot doesn't have it. */
-	static synchronized List<String> lookup(String source)
+	synchronized List<String> lookup(String source)
 	{
 		if (tables == null)
 		{
@@ -45,13 +43,8 @@ final class BundledDropTables
 		return table == null ? null : Collections.unmodifiableList(table);
 	}
 
-	private static Map<String, List<String>> load()
+	private Map<String, List<String>> load()
 	{
-		if (gson == null)
-		{
-			log.warn("Bundled drop tables not configured");
-			return Collections.emptyMap();
-		}
 		try (InputStream in = BundledDropTables.class.getResourceAsStream(RESOURCE))
 		{
 			if (in == null)

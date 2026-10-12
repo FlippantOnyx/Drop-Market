@@ -11,6 +11,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import javax.inject.Inject;
+import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -19,7 +21,8 @@ import lombok.extern.slf4j.Slf4j;
  * common the item is isn't judged here: the plugin price-checks log drops unless they're new to the account.
  */
 @Slf4j
-final class UniqueDrops
+@Singleton
+class UniqueDrops
 {
 	private static final String RESOURCE = "collection-log.json";
 
@@ -29,22 +32,17 @@ final class UniqueDrops
 		Map<String, List<String>> sources;
 	}
 
-	private static Set<String> logItems;
-	private static Map<String, Set<String>> logDropsBySource;
-	private static Gson gson;
+	private final Gson gson;
+	private Set<String> logItems;
+	private Map<String, Set<String>> logDropsBySource;
 
-	private UniqueDrops()
+	@Inject
+	UniqueDrops(Gson gson)
 	{
+		this.gson = gson;
 	}
 
-	/** Uses the client's injected Gson (the plugin hub forbids creating fresh instances). */
-	static synchronized void configure(Gson injected)
-	{
-		gson = injected;
-		logItems = null;
-	}
-
-	static synchronized boolean isLogDrop(String source, String item)
+	synchronized boolean isLogDrop(String source, String item)
 	{
 		if (source == null || item == null)
 		{
@@ -74,7 +72,7 @@ final class UniqueDrops
 		return false;
 	}
 
-	private static void load()
+	private void load()
 	{
 		if (logItems != null)
 		{
@@ -82,11 +80,6 @@ final class UniqueDrops
 		}
 		logItems = new HashSet<>();
 		logDropsBySource = new HashMap<>();
-		if (gson == null)
-		{
-			log.warn("Bundled collection log data not configured");
-			return;
-		}
 		try (InputStream in = UniqueDrops.class.getResourceAsStream(RESOURCE))
 		{
 			if (in == null)

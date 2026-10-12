@@ -280,11 +280,36 @@ public interface DropMarketConfig extends Config
 	}
 
 	@ConfigItem(
+		keyName = "showSecondNumber",
+		name = "Show Second Odds Number",
+		description = "Also show line 2's big odds number (with its change) to the right of line 1's.<br>"
+			+ "Needs Show Second Line; hidden in layouts too narrow to fit it.",
+		section = SECTION_LINES,
+		position = 4
+	)
+	default boolean showSecondNumber()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		keyName = "secondNumberPlacement",
+		name = "Second Number Position",
+		description = "Where line 2's big number goes: after line 1's change, or right beside line 1's number",
+		section = SECTION_LINES,
+		position = 5
+	)
+	default SecondNumberPlacement secondNumberPlacement()
+	{
+		return SecondNumberPlacement.AFTER_CHANGE;
+	}
+
+	@ConfigItem(
 		keyName = "line2Color",
 		name = "Line 2 Color",
 		description = "Color of the second, independent odds line",
 		section = SECTION_LINES,
-		position = 4
+		position = 6
 	)
 	default Color line2Color()
 	{
@@ -296,7 +321,7 @@ public interface DropMarketConfig extends Config
 		name = "Line 2 Falling Color",
 		description = "Color of line 2's change indicator when it drops",
 		section = SECTION_LINES,
-		position = 5
+		position = 7
 	)
 	default Color line2FallingColor()
 	{

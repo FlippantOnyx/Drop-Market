@@ -2,7 +2,6 @@ package com.dropmarket;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.gson.Gson;
 import com.google.inject.Provides;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -139,7 +138,10 @@ public class DropMarketPlugin extends Plugin
 	private WikiDropTableClient wiki;
 
 	@Inject
-	private Gson gson;
+	private BundledDropTables bundled;
+
+	@Inject
+	private UniqueDrops uniqueDrops;
 
 	@Inject
 	private CollectionLogTracker clog;
@@ -215,8 +217,6 @@ public class DropMarketPlugin extends Plugin
 	protected void startUp()
 	{
 		priorities = DropTables.parsePriorities(config.priorityDrops());
-		BundledDropTables.configure(gson);
-		UniqueDrops.configure(gson);
 		blacklist = DropTables.parsePriorities(config.blacklistedDrops());
 		ticks = 0;
 		loginTick = 0;
@@ -267,6 +267,11 @@ public class DropMarketPlugin extends Plugin
 	protected void shutDown()
 	{
 		overlayManager.remove(overlay);
+		resolved = false;
+		showingMarket = false;
+		marketSource = null;
+		marketItem = null;
+		personalOverride = false;
 	}
 
 	@Subscribe
@@ -444,6 +449,7 @@ public class DropMarketPlugin extends Plugin
 			if (SKILL_UNITS.containsKey(market))
 			{
 				skillCounts.merge(market, 1, Integer::sum);
+				finishActivityUnit();
 			}
 		}
 	}
@@ -604,6 +610,7 @@ public class DropMarketPlugin extends Plugin
 			if (DropTables.isCompletion(source, event.getName()))
 			{
 				killCounts.merge(source, 1, Integer::sum);
+				finishActivityUnit();
 			}
 			lastLootSource = source;
 			lastLootTick = ticks;
@@ -652,7 +659,7 @@ public class DropMarketPlugin extends Plugin
 					long price = priceOf(item);
 					value = price == DropQualifier.NO_PRICE || price == DropQualifier.PRICES_NOT_LOADED ? -1 : price;
 				}
-				boolean newLogItem = UniqueDrops.isLogDrop(currentSource(), item) && !clog.isObtained(item);
+				boolean newLogItem = uniqueDrops.isLogDrop(currentSource(), item) && !clog.isObtained(item);
 				if (DropQualifier.valuableMessageQualifies(value, config.winMinimumValue(), newLogItem,
 					listStatusHere(item), config.popOffOnEveryDrop()))
 				{
@@ -898,7 +905,7 @@ public class DropMarketPlugin extends Plugin
 		List<String> table = DropTables.lookup(source);
 		if (table == null)
 		{
-			table = BundledDropTables.lookup(source);
+			table = bundled.lookup(source);
 		}
 		if (table == null && config.wikiLookup())
 		{
@@ -1042,7 +1049,7 @@ public class DropMarketPlugin extends Plugin
 			// be betting on (e.g. landing Osmumten's fang while the market was showing Tumeken's shadow).
 			boolean onTable = tableContains(table, name);
 			boolean slot = clog.isSlot(name);
-			boolean logDrop = UniqueDrops.isLogDrop(marketSource, name);
+			boolean logDrop = uniqueDrops.isLogDrop(marketSource, name);
 			// A log item you haven't got yet opens a new collection log slot; repeats of common ones get price-checked.
 			boolean newLogItem = logDrop && !clog.isObtained(name);
 			boolean qualifies = DropQualifier.lootQualifies(price, config.winMinimumValue(), onTable, isTarget,
@@ -1129,6 +1136,13 @@ public class DropMarketPlugin extends Plugin
 		graph.pinToCertain();
 		polyGraph.pinToCertain();
 		updateTitle();
+	}
+
+	/** One kill, loot or skilling action done: lets either graph move on to its next drift profile if it is due. */
+	private void finishActivityUnit()
+	{
+		graph.completeActivity();
+		polyGraph.completeActivity();
 	}
 
 	/** A collection log slot or valuable drop overrides whatever the ticker was showing. */

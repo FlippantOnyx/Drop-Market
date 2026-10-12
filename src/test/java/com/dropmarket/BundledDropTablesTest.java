@@ -8,25 +8,22 @@ import org.junit.Test;
 
 public class BundledDropTablesTest
 {
-	static
-	{
-		BundledDropTables.configure(new com.google.gson.Gson());
-		UniqueDrops.configure(new com.google.gson.Gson());
-	}
+	private final BundledDropTables bundled = new BundledDropTables(new com.google.gson.Gson());
+	private final UniqueDrops uniqueDrops = new UniqueDrops(new com.google.gson.Gson());
 
 	@Test
 	public void snapshotHasMonstersAndNormalizesNames()
 	{
-		List<String> zulrah = BundledDropTables.lookup("Zulrah");
+		List<String> zulrah = bundled.lookup("Zulrah");
 		assertNotNull(zulrah);
 		assertTrue(zulrah.contains("Tanzanite fang"));
-		assertNotNull(BundledDropTables.lookup("  ZULRAH "));
+		assertNotNull(bundled.lookup("  ZULRAH "));
 	}
 
 	@Test
 	public void snapshotSkipsDeadmanVariants()
 	{
-		for (String item : BundledDropTables.lookup("Yama"))
+		for (String item : bundled.lookup("Yama"))
 		{
 			assertTrue(item, !item.contains("Deadman"));
 		}
@@ -35,6 +32,6 @@ public class BundledDropTablesTest
 	@Test
 	public void unknownMonsterIsNull()
 	{
-		assertNull(BundledDropTables.lookup("Definitely Not A Monster"));
+		assertNull(bundled.lookup("Definitely Not A Monster"));
 	}
 }

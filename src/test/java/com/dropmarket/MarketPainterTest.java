@@ -35,6 +35,13 @@ public class MarketPainterTest
 		String bar1Text = "";
 		String bar2Text = "";
 		OverlayLayout layout = OverlayLayout.FULL;
+		boolean showSecondNumber;
+
+		@Override
+		public boolean showSecondNumber()
+		{
+			return showSecondNumber;
+		}
 
 		@Override
 		public OverlayLayout overlayLayout()
@@ -304,5 +311,36 @@ public class MarketPainterTest
 			}
 		}
 		return false;
+	}
+
+	private static int colorPixelsAbove(BufferedImage img, Color c, int maxY)
+	{
+		int n = 0;
+		for (int y = 0; y < Math.min(maxY, img.getHeight()); y++)
+		{
+			for (int x = 0; x < img.getWidth(); x++)
+			{
+				if ((img.getRGB(x, y) & 0xFFFFFF) == (c.getRGB() & 0xFFFFFF))
+				{
+					n++;
+				}
+			}
+		}
+		return n;
+	}
+
+	@Test
+	public void secondOddsNumberAddsLineTwoTextNextToTheFirst() throws Exception
+	{
+		MarketGraph poly = new MarketGraph(new Random(99));
+		poly.reset();
+		TestConfig config = new TestConfig();
+		config.showSecondLine = true;
+		BufferedImage off = render("Zulrah drops Tanzanite fang", false, 0, 260, 192, config, poly, 0);
+		config.showSecondNumber = true;
+		BufferedImage on = render("Zulrah drops Tanzanite fang", false, 0, 260, 192, config, poly, 0);
+		// The text rows sit above the chart, so extra line-2 colored pixels up there are the second number.
+		assertTrue(colorPixelsAbove(on, DropMarketConfig.DEFAULT_LINE2_COLOR, 70)
+			> colorPixelsAbove(off, DropMarketConfig.DEFAULT_LINE2_COLOR, 70));
 	}
 }

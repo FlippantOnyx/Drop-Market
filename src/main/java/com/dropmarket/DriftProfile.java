@@ -9,7 +9,7 @@ import java.util.Random;
 enum DriftProfile
 {
 	// label, weight, anchor min, anchor span, noise, jump chance, jump min, jump span, anchor re-roll chance, ceiling
-	STEADY("Steady", 55, 10, 46, 2.6, 0.07, 6, 10, 0.03, 82),
+	STEADY("Steady", 55, 6, 56, 2.6, 0.07, 6, 10, 0.03, 72),
 	// Creeps upward toward ~85-90 as the raid or boss fight nears its end, then falls back.
 	CLIMBER("Climber", 15, 8, 20, 2.4, 0.04, 5, 8, 0.0, 91),
 	CHOPPY("Choppy", 10, 12, 43, 4.2, 0.14, 8, 10, 0.06, 82),

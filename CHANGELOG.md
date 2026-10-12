@@ -2,6 +2,8 @@
 
 ## 1.2.0
 
+- A second big odds number (Show Second Odds Number) with a position setting; Steady now ranges about 6-72%
+- Drift profiles last 10-15 minutes on an internal clock and only change after a finished kill or action, whatever the activity
 - Odds now move in "drift profiles": Steady (everyday), Climber (rises toward ~90 as a fight nears its end), Choppy, Sleeper, Spike and Fader; everyday highs top out around 82
 - Overlay Layout setting: Full, Compact (two rows with a sparkline, wiki abbreviations like ToB) or Ticker (a single scrolling line)
 - Optional Win Sound using built-in game sounds

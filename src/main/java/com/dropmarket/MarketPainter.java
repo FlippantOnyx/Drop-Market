@@ -40,6 +40,10 @@ final class MarketPainter
 	private static final int BRAND_BAR_H = 14;
 	private static final int COMPACT_BODY_H = 56;
 	private static final int TICKER_H = 20;
+	// Spacing in the odds row: big number to its change, between the two numbers, and between two changes.
+	private static final int CHANGE_GAP = 12;
+	private static final int NUMBER_GAP = 20;
+	private static final int PAIR_GAP = 10;
 	private static final int SCROLL_GAP = 28;
 	private static final int SCROLL_PX_PER_TICK = 8;
 
@@ -158,15 +162,8 @@ final class MarketPainter
 			y += 3 + bigFm.getAscent();
 			int pct = (int) Math.round(graph.current());
 			String pctText = pct + "%";
-			g.setFont(bigFont);
-			text(g, pctText, PAD, y, accent);
-			int x = PAD + bigFm.stringWidth(pctText) + 10;
-
-			int deltaW = drawDelta(g, x, y, delta1, accent, config.line1FallingColor(), smallFont);
-			if (secondLine != null)
-			{
-				drawDelta(g, x + deltaW + 8, y, delta2, accent2, config.line2FallingColor(), smallFont);
-			}
+			String pct2 = secondLine == null ? null : Math.round(secondLine.current()) + "%";
+			drawOdds(g, PAD, y, w - PAD, bigFont, smallFont, accent, accent2, pctText, pct2, delta1, delta2, config);
 			y += bigFm.getDescent();
 			g.setFont(smallFont);
 
@@ -257,13 +254,9 @@ final class MarketPainter
 		int pctBaseline = y + bigFm.getAscent();
 		String pctText = Math.round(graph.current()) + "%";
 		g.setFont(bigFont);
-		text(g, pctText, PAD, pctBaseline, accent);
-		int dx = PAD + bigFm.stringWidth(pctText) + 10;
-		dx += drawDelta(g, dx, pctBaseline, delta1, accent, config.line1FallingColor(), smallFont);
-		if (secondLine != null)
-		{
-			dx += 8 + drawDelta(g, dx + 8, pctBaseline, delta2, accent2, config.line2FallingColor(), smallFont);
-		}
+		String pct2 = secondLine == null ? null : Math.round(secondLine.current()) + "%";
+		int dx = drawOdds(g, PAD, pctBaseline, w - PAD - 24, bigFont, smallFont, accent, accent2, pctText, pct2, delta1,
+			delta2, config);
 
 		int sparkLeft = dx + 12;
 		int sparkRight = w - PAD - 3;
@@ -308,22 +301,35 @@ final class MarketPainter
 			right = sparkLeft - 8;
 		}
 
-		int deltaW = deltaWidth(g, delta1, smallFont) + (secondDelta ? 8 + deltaWidth(g, delta2, smallFont) : 0);
-		int deltaX = right - deltaW;
-		int dx = deltaX + drawDelta(g, deltaX, baseline, delta1, accent, config.line1FallingColor(), smallFont);
-		if (secondDelta)
-		{
-			drawDelta(g, dx + 8, baseline, delta2, accent2, config.line2FallingColor(), smallFont);
-		}
-
-		String pctText = Math.round(graph.current()) + "%";
+		boolean secondNumber = secondLine != null && config.showSecondNumber() && w >= 300;
+		String pct1 = Math.round(graph.current()) + "%";
+		String pct2 = secondLine == null ? "" : Math.round(secondLine.current()) + "%";
+		int d1W = deltaWidth(g, delta1, smallFont);
+		int d2W = secondLine == null ? 0 : deltaWidth(g, delta2, smallFont);
+		int groupGap = 10;
+		int group1W = titleFm.stringWidth(pct1) + 6 + d1W;
+		int group2W = secondNumber ? titleFm.stringWidth(pct2) + 6 + d2W : secondDelta ? d2W : 0;
+		int startX = right - (group1W + (group2W > 0 ? groupGap + group2W : 0));
+		int x = startX;
 		g.setFont(titleFont);
-		int pctX = deltaX - 8 - titleFm.stringWidth(pctText);
-		text(g, pctText, pctX, baseline, accent);
+		text(g, pct1, x, baseline, accent);
+		x += titleFm.stringWidth(pct1) + 6;
+		x += drawDelta(g, x, baseline, delta1, accent, config.line1FallingColor(), smallFont);
+		if (group2W > 0)
+		{
+			x += groupGap;
+			if (secondNumber)
+			{
+				g.setFont(titleFont);
+				text(g, pct2, x, baseline, accent2);
+				x += titleFm.stringWidth(pct2) + 6;
+			}
+			drawDelta(g, x, baseline, delta2, accent2, config.line2FallingColor(), smallFont);
+		}
 		Font tickerTitleFont = smallFont.deriveFont(Font.BOLD);
 		g.setFont(tickerTitleFont);
 		FontMetrics tickerFm = g.getFontMetrics(tickerTitleFont);
-		int titleRight = pctX - 8;
+		int titleRight = startX - 8;
 		String shortTitle = abbreviatedTitle(title);
 		if (tickerFm.stringWidth(shortTitle) <= titleRight - titleLeft)
 		{
@@ -402,6 +408,62 @@ final class MarketPainter
 	{
 		FontMetrics fm = g.getFontMetrics(deltaFont(smallFont));
 		return (delta != 0 ? 11 : 0) + fm.stringWidth(Math.abs(delta) + "%");
+	}
+
+	/**
+	 * Draws line 1's big number and change, plus line 2's change (and, if enabled and it fits, line 2's big number)
+	 * starting at startX, and returns where it ended. The second number gets generous spacing either way.
+	 */
+	private static int drawOdds(Graphics2D g, int startX, int baseline, int limit, Font bigFont, Font smallFont,
+		Color accent, Color accent2, String pct1, String pct2, int delta1, int delta2, DropMarketConfig config)
+	{
+		FontMetrics bigFm = g.getFontMetrics(bigFont);
+		int pct1W = bigFm.stringWidth(pct1);
+		int d1W = deltaWidth(g, delta1, smallFont);
+		int d2W = pct2 == null ? 0 : deltaWidth(g, delta2, smallFont);
+		int pct2W = pct2 == null ? 0 : bigFm.stringWidth(pct2);
+		boolean beside = config.secondNumberPlacement() == SecondNumberPlacement.BESIDE_FIRST;
+		boolean number = pct2 != null && config.showSecondNumber();
+		if (number)
+		{
+			int needed = beside
+				? pct1W + NUMBER_GAP + pct2W + CHANGE_GAP + d1W + PAIR_GAP + d2W
+				: pct1W + CHANGE_GAP + d1W + NUMBER_GAP + pct2W + CHANGE_GAP + d2W;
+			number = startX + needed <= limit;
+		}
+
+		int x = startX;
+		g.setFont(bigFont);
+		text(g, pct1, x, baseline, accent);
+		x += pct1W;
+		if (number && beside)
+		{
+			x += NUMBER_GAP;
+			g.setFont(bigFont);
+			text(g, pct2, x, baseline, accent2);
+			x += pct2W + CHANGE_GAP;
+			x += drawDelta(g, x, baseline, delta1, accent, config.line1FallingColor(), smallFont) + PAIR_GAP;
+			return x + drawDelta(g, x, baseline, delta2, accent2, config.line2FallingColor(), smallFont);
+		}
+
+		x += CHANGE_GAP;
+		x += drawDelta(g, x, baseline, delta1, accent, config.line1FallingColor(), smallFont);
+		if (pct2 == null)
+		{
+			return x;
+		}
+		if (number)
+		{
+			x += NUMBER_GAP;
+			g.setFont(bigFont);
+			text(g, pct2, x, baseline, accent2);
+			x += pct2W + CHANGE_GAP;
+		}
+		else
+		{
+			x += PAIR_GAP;
+		}
+		return x + drawDelta(g, x, baseline, delta2, accent2, config.line2FallingColor(), smallFont);
 	}
 
 	/** Always renders (the delta should never disappear); the arrow is skipped only for an exact 0. */

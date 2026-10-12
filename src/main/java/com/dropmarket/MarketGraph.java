@@ -5,12 +5,19 @@ import java.util.Random;
 class MarketGraph
 {
 	static final int POINTS = 40;
+	/** The plugin steps a live graph every 5 game ticks (3 seconds); profile timing below is counted in those steps. */
+	static final int STEP_SECONDS = 3;
 	private static final double MIN = 1;
 	// Below LOW_MARK for several steps in a row the line is nudged back up; above HIGH_MARK it is pulled back down.
 	private static final double LOW_MARK = 9;
 	private static final double HIGH_MARK = 74;
 	private static final int LOW_DWELL_STEPS = 6;
 	private static final int HIGH_DWELL_STEPS = 6;
+	// A drift profile lasts 10-15 minutes of live stepping, whatever the player is doing; after that it eases into the
+	// next one at the next finished kill or action.
+	private static final int PROFILE_MIN_STEPS = 10 * 60 / STEP_SECONDS;
+	private static final int PROFILE_EXTRA_STEPS = 5 * 60 / STEP_SECONDS;
+	private static final int TRANSITION_STEPS = 20;
 
 	private final Random random;
 	private final double[] points = new double[POINTS];
@@ -19,15 +26,20 @@ class MarketGraph
 	private double anchor;
 	private long volume;
 
-	private DriftProfile profile = DriftProfile.STEADY;
+	private DriftProfile profile;
+	private int profileStepsLeft;
+	private boolean switchPending;
+	// While easing into a new profile the anchor glides to this goal instead of jumping.
+	private double anchorGoal;
+	private int transitionLeft;
 	// Per-step anchor change (CLIMBER up, FADER down) and where the climb ends.
 	private double trend;
 	private double climbTarget;
 	private int spikeLeft;
 	private double spikeBase;
 	private int lowDwell;
-	private int liftSteps;
 	private int highDwell;
+	private int liftSteps;
 
 	MarketGraph(Random random)
 	{
@@ -39,44 +51,89 @@ class MarketGraph
 		return profile;
 	}
 
-	/** Opens a fresh market with a believable-looking price history already on the chart. */
+	/**
+	 * Opens a fresh market with a believable-looking price history already on the chart. The drift profile is NOT
+	 * re-rolled here: it runs on its own clock and carries over when the player switches boss, raid or skill.
+	 */
 	void reset()
 	{
-		reset(DriftProfile.roll(random));
+		if (profile == null)
+		{
+			beginProfile(DriftProfile.roll(random), false);
+		}
+		rebuildHistory();
 	}
 
+	/** Starts over with a specific profile (and a fresh clock); used by tests. */
 	void reset(DriftProfile forced)
+	{
+		beginProfile(forced, false);
+		rebuildHistory();
+	}
+
+	private void rebuildHistory()
 	{
 		head = 0;
 		count = 0;
-		profile = forced;
-		anchor = profile.rollAnchor(random);
-		trend = 0;
-		spikeLeft = 0;
 		lowDwell = 0;
 		highDwell = 0;
 		liftSteps = 0;
+		volume = 50_000L + (long) (random.nextDouble() * 5_000_000L);
+		push(clamp(anchor + random.nextGaussian() * 6, anchor));
+		for (int i = 1; i < POINTS; i++)
+		{
+			step(false);
+		}
+	}
+
+	/** Switches to a profile. Graceful switches glide the anchor over to the new profile's level. */
+	private void beginProfile(DriftProfile next, boolean graceful)
+	{
+		profile = next;
+		profileStepsLeft = PROFILE_MIN_STEPS + random.nextInt(PROFILE_EXTRA_STEPS + 1);
+		switchPending = false;
+		trend = 0;
+		spikeLeft = 0;
 		if (profile == DriftProfile.CLIMBER)
 		{
-			trend = 0.3 + random.nextDouble() * 0.25;
+			trend = 0.45 + random.nextDouble() * 0.35;
 			climbTarget = 84 + random.nextDouble() * 6;
 		}
 		else if (profile == DriftProfile.FADER)
 		{
 			trend = -(0.25 + random.nextDouble() * 0.15);
 		}
-		volume = 50_000L + (long) (random.nextDouble() * 5_000_000L);
-		push(clamp(anchor + random.nextGaussian() * 6, anchor));
-		for (int i = 1; i < POINTS; i++)
+		double start = profile.rollAnchor(random);
+		if (graceful)
 		{
-			step();
+			anchorGoal = start;
+			transitionLeft = TRANSITION_STEPS;
+		}
+		else
+		{
+			anchor = start;
+			transitionLeft = 0;
 		}
 	}
 
 	void step()
 	{
+		step(true);
+	}
+
+	/** A live step also runs the profile clock and its dynamics; history prefill steps only wander. */
+	private void step(boolean live)
+	{
 		double last = current();
-		advanceProfile();
+		if (live)
+		{
+			if (profileStepsLeft > 0 && --profileStepsLeft == 0)
+			{
+				// The clock has run out, but the switch waits for the current kill or action to finish.
+				switchPending = true;
+			}
+			advanceProfile();
+		}
 		double drift = (anchor - last) * 0.08;
 		double move = random.nextGaussian() * profile.noise;
 		if (liftSteps > 0)
@@ -93,15 +150,50 @@ class MarketGraph
 		trackDwell(next);
 		push(next);
 		volume += (long) (random.nextDouble() * 180_000L);
-		if (profile.rerollChance > 0 && random.nextDouble() < profile.rerollChance)
+		if (live && profile.rerollChance > 0 && random.nextDouble() < profile.rerollChance)
 		{
 			anchor = profile.rollAnchor(random);
 		}
 	}
 
+	/**
+	 * Call when one unit of the activity finishes (a kill, a loot, a skilling action). If the profile's 10-15 minutes
+	 * are up, this is the moment it eases into the next one, so a profile never changes mid-attempt.
+	 */
+	void completeActivity()
+	{
+		if (switchPending)
+		{
+			beginProfile(nextProfile(), true);
+		}
+	}
+
+	/** True once a profile's time is up and it is only waiting for the next finished kill or action. */
+	boolean switchPending()
+	{
+		return switchPending;
+	}
+
+	/** A different profile from the current one, by the usual odds. */
+	private DriftProfile nextProfile()
+	{
+		DriftProfile next = DriftProfile.roll(random);
+		for (int tries = 0; next == profile && tries < 8; tries++)
+		{
+			next = DriftProfile.roll(random);
+		}
+		return next;
+	}
+
 	/** Moves the anchor the line is pulled toward, for the profiles that change over time. */
 	private void advanceProfile()
 	{
+		if (transitionLeft > 0)
+		{
+			anchor += (anchorGoal - anchor) / transitionLeft;
+			transitionLeft--;
+			return;
+		}
 		switch (profile)
 		{
 			case CLIMBER:

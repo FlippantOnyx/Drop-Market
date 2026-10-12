@@ -2,6 +2,9 @@
 
 ## 1.3.0
 
+- Win sounds are louder: a new Win Sound Volume setting (100% by default) plays them at their own volume
+- New win sounds Collection Log and Gem Alert; "Collect bloop" is gone; the town crier bell now rings up and down six times
+- The change numbers stay put during a celebration instead of dropping to 0% when another drop lands
 - The odds lines are drawn rigid like a real market chart: flat holds, straight runs, sharp corners and sudden jumps instead of a smooth wiggle
 - Long titles never get cut off: Compact puts a title that doesn't fit on a second line (the card grows to hold it), and only if it would need a third uses the wiki short names (ToB, ToA, CoX, and items like fang, shadow, Tbow); Full wraps to two lines and scrolls only as a last resort
 - Compact with the second odds number shrinks the numbers like the ticker does, so the sparkline is visible again

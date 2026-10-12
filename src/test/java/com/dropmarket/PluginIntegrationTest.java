@@ -86,6 +86,15 @@ public class PluginIntegrationTest
 		{
 			r.run();
 		}
+
+		@Override
+		public void invokeLater(java.util.function.BooleanSupplier r)
+		{
+			// Runs to completion straight away: each call is one client tick in the real thing.
+			while (!r.getAsBoolean())
+			{
+			}
+		}
 	}
 
 	/** The overlay manager can't be stubbed (private constructor); the real one is never asked to do anything real. */
@@ -235,7 +244,7 @@ public class PluginIntegrationTest
 		});
 	}
 
-	private static Client client(Mode mode)
+	private static Client client(Mode mode, List<int[]> sounds)
 	{
 		Player player = stub(Player.class, (m, args) ->
 		{
@@ -261,6 +270,9 @@ public class PluginIntegrationTest
 			}
 			switch (m.getName())
 			{
+				case "playSoundEffect":
+					sounds.add(new int[]{(Integer) args[0], args.length > 1 ? (Integer) args[1] : -1});
+					return null;
 				case "getGameState":
 					return GameState.LOGGED_IN;
 				case "getLocalPlayer":
@@ -275,10 +287,14 @@ public class PluginIntegrationTest
 
 	/** The real config, built the way RuneLite does it: a proxy of the interface that answers with the defaults. */
 	@SuppressWarnings("unchecked")
-	private static DropMarketConfig config()
+	private static DropMarketConfig config(WinSound winSound)
 	{
 		InvocationHandler handler = (proxy, method, args) ->
 		{
+			if (winSound != null && method.getName().equals("winSound"))
+			{
+				return winSound;
+			}
 			if (method.isDefault())
 			{
 				return java.lang.invoke.MethodHandles.privateLookupIn(DropMarketConfig.class,
@@ -299,14 +315,21 @@ public class PluginIntegrationTest
 		final Client client;
 		final StubProfileStore store = new StubProfileStore();
 
+		final List<int[]> sounds = new ArrayList<>();
+
 		Rig(Mode mode) throws Exception
 		{
-			client = client(mode);
+			this(mode, null);
+		}
+
+		Rig(Mode mode, WinSound winSound) throws Exception
+		{
+			client = client(mode, sounds);
 			OverlayManager overlays = allocate(OverlayManager.class);
 			ClientThread thread = allocate(StubClientThread.class);
 			ItemLookup items = new StubItemLookup(mode);
 			plugin = new DropMarketPlugin();
-			DropMarketConfig config = config();
+			DropMarketConfig config = config(winSound);
 			Injector injector = Guice.createInjector(new AbstractModule()
 			{
 				@Override
@@ -575,6 +598,40 @@ public class PluginIntegrationTest
 			Assert.assertEquals(delta2, rig.plugin.getDisplayDelta2());
 		}
 		Assert.assertEquals(Collections.emptyList(), rig.unexpectedFailures());
+	}
+
+	/** The win sound reaches the game at the set volume, and the bell rings six notes, up and down, once per win. */
+	@Test
+	public void winSoundsPlayAtFullVolumeAndTheBellRingsSixNotes() throws Exception
+	{
+		Rig bell = new Rig(Mode.NORMAL, WinSound.BELL_DING);
+		bell.plugin.startUp();
+		bell.plugin.onChatMessage(new ChatMessage(null, ChatMessageType.GAMEMESSAGE, "",
+			"New item added to your collection log: Tanzanite fang", null, 1));
+		Assert.assertEquals(6, bell.sounds.size());
+		for (int i = 0; i < 6; i++)
+		{
+			Assert.assertEquals(i % 2 == 0 ? 3813 : 3817, bell.sounds.get(i)[0]);
+			Assert.assertEquals(127, bell.sounds.get(i)[1]);
+		}
+		// The loot event and chat message for one drop land on the same tick and make the noise once.
+		bell.plugin.onChatMessage(new ChatMessage(null, ChatMessageType.GAMEMESSAGE, "",
+			"New item added to your collection log: Tanzanite fang", null, 2));
+		Assert.assertEquals(6, bell.sounds.size());
+		Assert.assertEquals(Collections.emptyList(), bell.unexpectedFailures());
+
+		Rig gem = new Rig(Mode.NORMAL, WinSound.GEM_ALERT);
+		gem.plugin.startUp();
+		gem.plugin.onChatMessage(new ChatMessage(null, ChatMessageType.GAMEMESSAGE, "",
+			"New item added to your collection log: Tanzanite fang", null, 1));
+		Assert.assertEquals(1, gem.sounds.size());
+		Assert.assertEquals(2655, gem.sounds.get(0)[0]);
+
+		Rig off = new Rig(Mode.NORMAL);
+		off.plugin.startUp();
+		off.plugin.onChatMessage(new ChatMessage(null, ChatMessageType.GAMEMESSAGE, "",
+			"New item added to your collection log: Tanzanite fang", null, 1));
+		Assert.assertEquals(0, off.sounds.size());
 	}
 
 	@Test

@@ -76,6 +76,8 @@ public class DropMarketPlugin extends Plugin
 	// Rock/tree respawns and moving between fishing spots leave bigger gaps than combat idling does.
 	private static final int SKILL_IDLE_TICKS = 150;
 	private static final int VOLUME_POP_TICKS = 8;
+	// Client ticks (20ms each) between the notes of a multi-note win sound.
+	private static final int NOTE_GAP_CLIENT_TICKS = 12;
 	private static final double VOLUME_POP_CHANCE = 0.3;
 	// Rolled once per PvM kill/attempt: a flat shot at the market featuring the pet instead of the usual
 	// most-valuable drop, win or lose on the actual roll - and regardless of whether it's already obtained.
@@ -1482,14 +1484,50 @@ public class DropMarketPlugin extends Plugin
 		return false;
 	}
 
+	/** Game volume (0-127) for a 0-100 setting. */
+	static int soundVolume(int percent)
+	{
+		return (int) Math.round(127 * Math.max(0, Math.min(100, percent)) / 100.0);
+	}
+
+	/**
+	 * Plays the chosen win sound at its own volume. A sound with several notes (the bell) plays the first now and the
+	 * rest a beat apart on the client thread, so they ring in succession without ever blocking it.
+	 */
+	private void playWinSound(WinSound sound, int percent)
+	{
+		int[] notes = sound.notes();
+		int volume = soundVolume(percent);
+		if (notes.length == 0 || volume == 0)
+		{
+			return;
+		}
+		client.playSoundEffect(notes[0], volume);
+		if (notes.length == 1)
+		{
+			return;
+		}
+		int[] next = {1};
+		int[] wait = {NOTE_GAP_CLIENT_TICKS};
+		clientThread.invokeLater(() -> guard.call("win sound note", () ->
+		{
+			if (--wait[0] > 0)
+			{
+				return false;
+			}
+			client.playSoundEffect(notes[next[0]++], volume);
+			wait[0] = NOTE_GAP_CLIENT_TICKS;
+			return next[0] >= notes.length;
+		}, true));
+	}
+
 	private void resolve()
 	{
 		// Loot events and chat messages for one drop can land on the same tick; make the noise once.
 		boolean alreadyCelebrating = resolved && resolvedTick == ticks;
-		WinSound sound = config.winSound();
-		if (!alreadyCelebrating && sound != WinSound.OFF)
+		if (!alreadyCelebrating)
 		{
-			client.playSoundEffect(sound.soundId());
+			playWinSound(config.winSound(), config.winSoundVolume());
 		}
 		if (!resolved)
 		{

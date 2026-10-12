@@ -223,7 +223,7 @@ public interface DropMarketConfig extends Config
 	@ConfigItem(
 		keyName = "winSound",
 		name = "Win Sound",
-		description = "A built-in game sound to play on a win (uses your in-game sound effect volume)",
+		description = "A built-in game sound to play on a win",
 		section = SECTION_CELEBRATION,
 		position = 3
 	)
@@ -233,11 +233,26 @@ public interface DropMarketConfig extends Config
 	}
 
 	@ConfigItem(
+		keyName = "winSoundVolume",
+		name = "Win Sound Volume",
+		description = "How loud the win sound plays, from 0 to 100. This is its own volume, so it is not affected by<br>"
+			+ "your in-game sound effect slider (but muting the game's sound effects still silences it).",
+		section = SECTION_CELEBRATION,
+		position = 4
+	)
+	@Range(min = 0, max = 100)
+	@Units(Units.PERCENT)
+	default int winSoundVolume()
+	{
+		return 100;
+	}
+
+	@ConfigItem(
 		keyName = "celebrationSeconds",
 		name = "Celebration Seconds",
 		description = "How long a win stays on screen before the overlay goes back to normal",
 		section = SECTION_CELEBRATION,
-		position = 4
+		position = 5
 	)
 	@Range(min = 5, max = 120)
 	@Units(Units.SECONDS)

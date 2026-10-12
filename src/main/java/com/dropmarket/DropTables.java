@@ -365,6 +365,39 @@ final class DropTables
 		return !RAIDS.contains(canonicalSource) || normalize(canonicalSource).equals(normalize(rawName));
 	}
 
+	/** Common OSRS Wiki short names, for the compact layouts. */
+	private static final Map<String, String> ABBREVIATIONS = new HashMap<>();
+
+	static
+	{
+		String[][] pairs = {
+			{CHAMBERS_OF_XERIC, "CoX"}, {THEATRE_OF_BLOOD, "ToB"}, {TOMBS_OF_AMASCUT, "ToA"},
+			{GUARDIANS_OF_THE_RIFT, "GotR"}, {THE_GAUNTLET, "Gauntlet"}, {CORRUPTED_GAUNTLET, "CG"},
+			{"The Nightmare", "Nightmare"}, {"Phosani's Nightmare", "Phosani"}, {"General Graardor", "Graardor"},
+			{"Kree'arra", "Kree"}, {"Commander Zilyana", "Zilyana"}, {"K'ril Tsutsaroth", "K'ril"},
+			{"Corporeal Beast", "Corp"}, {"Alchemical Hydra", "Hydra"}, {"Thermonuclear smoke devil", "Thermy"},
+			{"Abyssal Sire", "Sire"}, {"Grotesque Guardians", "Gargs"}, {"Kalphite Queen", "KQ"},
+			{"King Black Dragon", "KBD"}, {"Dagannoth Rex", "Rex"}, {"Dagannoth Prime", "Prime"},
+			{"Dagannoth Supreme", "Supreme"}, {"Giant Mole", "Mole"}, {"Phantom Muspah", "Muspah"},
+			{"Chaos Elemental", "Chaos Ele"}, {"Duke Sucellus", "Duke"}, {"The Leviathan", "Leviathan"},
+			{"The Whisperer", "Whisperer"}, {"The Hueycoatl", "Huey"}, {"Doom of Mokhaiotl", "Doom"},
+			{"Fortis Colosseum", "Colosseum"}, {"Moons of Peril", "Moons"}, {"TzHaar Fight Cave", "Fight Cave"},
+			{"The Inferno", "Inferno"}, {"Crazy archaeologist", "Crazy Arch"}, {"Bryophyta", "Bryo"},
+			{"Cerberus", "Cerb"}, {"Tormented Demon", "TD"}, {"Royal Titans", "Titans"}, {TREASURE_TRAILS, "Clues"}
+		};
+		for (String[] pair : pairs)
+		{
+			ABBREVIATIONS.put(normalize(pair[0]), pair[1]);
+		}
+	}
+
+	/** The wiki's short name for a source (ToB, CoX, KBD...), or the source itself if it has none. */
+	static String abbreviation(String source)
+	{
+		String abbreviation = ABBREVIATIONS.get(normalize(source));
+		return abbreviation != null ? abbreviation : source;
+	}
+
 	static List<String> lookup(String source)
 	{
 		List<String> table = TABLES.get(normalize(source));

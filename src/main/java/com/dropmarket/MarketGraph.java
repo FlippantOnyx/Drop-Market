@@ -18,6 +18,9 @@ class MarketGraph
 	private static final int PROFILE_MIN_STEPS = 10 * 60 / STEP_SECONDS;
 	private static final int PROFILE_EXTRA_STEPS = 5 * 60 / STEP_SECONDS;
 	private static final int TRANSITION_STEPS = 20;
+	// Each step is a straight run (sharp corners, now and then flat) plus the lively jitter the line always had.
+	private static final double JITTER = 0.6;
+	private static final double RUN_SIZE = 0.75;
 
 	private final Random random;
 	private final double[] points = new double[POINTS];
@@ -140,7 +143,7 @@ class MarketGraph
 		}
 		double drift = (anchor - last) * 0.08;
 		// A climb out of a low patch replaces the current run, so a downward run can't fight it.
-		double move = (liftSteps > 0 ? 0 : nextRun()) + random.nextGaussian() * profile.noise * 0.2;
+		double move = (liftSteps > 0 ? 0 : nextRun()) + random.nextGaussian() * profile.noise * JITTER;
 		if (liftSteps > 0)
 		{
 			// Climbing out of a low patch: a steady push on top of the anchor pull.
@@ -166,8 +169,8 @@ class MarketGraph
 	{
 		if (slopeLeft <= 0)
 		{
-			slopeLeft = 2 + random.nextInt(5);
-			slope = random.nextDouble() < 0.25 ? 0 : random.nextGaussian() * profile.noise * 1.1;
+			slopeLeft = 2 + random.nextInt(4);
+			slope = random.nextDouble() < 0.12 ? 0 : random.nextGaussian() * profile.noise * RUN_SIZE;
 		}
 		slopeLeft--;
 		return slope;

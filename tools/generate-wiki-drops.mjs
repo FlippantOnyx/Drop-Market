@@ -92,12 +92,12 @@ for (let offset = 0; ; offset += PAGE) {
 	recipes.push(...batch);
 	if (batch.length < PAGE) break;
 }
-// Only items that actually drop from something count: parts you make (icons, the inactive Saeldor blade...) never drop
-// themselves, and their drop-side ingredients (vestiges, oathplate shards...) are tradeable and priced normally.
-const dropped = new Set(rows.map((row) => row.item_name));
-// Follow recipes backwards through untradeable steps: an expensive tradeable item (a ring worth 5m+) needs an
-// untradeable icon, which needs an untradeable vestige that actually drops. Every untradeable ingredient on such a
-// chain counts as "valuable"; the ones that drop from something are what we keep.
+// Untradeable drops that end up (through any number of crafting steps) in an expensive tradeable item are worth that
+// item's price to us: the Ultor vestige makes the icon, which makes the Ultor ring, so killing Vardorvis for the
+// vestige is a 110m drop. Parts of the Soulreaper axe are the exception: it takes four of them, so none is valued at
+// the whole axe; they stay "worth celebrating" with no value. The crystal weapon line is left out on purpose.
+const IGNORED = /saeldor|faerdhinen|crystal weapon seed/i;
+const SHARED_PARTS = /soulreaper axe/i;
 const parsed = [];
 for (const row of recipes) {
 	let recipe;
@@ -105,25 +105,39 @@ for (const row of recipes) {
 	const output = recipe.output?.name;
 	if (output && Array.isArray(recipe.materials)) parsed.push({ output, materials: recipe.materials.map((m) => m.name).filter(Boolean) });
 }
-// The crystal weapon line (enhanced seed, Blade of Saeldor, Bow of Faerdhinen) is deliberately left out.
-const IGNORED = /saeldor|faerdhinen|crystal weapon seed/i;
-const valuable = new Set([...worth].filter(([name, value]) => value >= MIN_COMPONENT_OUTPUT_VALUE && !IGNORED.test(name)).map(([name]) => name));
+const valueOf = new Map([...worth].filter(([name, value]) => value >= MIN_COMPONENT_OUTPUT_VALUE && !IGNORED.test(name)));
 for (let changed = true; changed;) {
 	changed = false;
 	for (const { output, materials } of parsed) {
-		if (!valuable.has(output)) continue;
+		const value = valueOf.get(output);
+		if (!value || SHARED_PARTS.test(output)) continue;
 		for (const material of materials) {
-			if (material !== 'Coins' && !tradeable.has(material) && !valuable.has(material) && !IGNORED.test(material)) {
-				valuable.add(material);
+			if (material === 'Coins' || tradeable.has(material) || IGNORED.test(material)) continue;
+			if ((valueOf.get(material) ?? 0) < value) {
+				valueOf.set(material, value);
 				changed = true;
 			}
 		}
 	}
 }
-const components = new Set([...valuable].filter((name) => !tradeable.has(name) && dropped.has(name) && name !== 'Coins'));
+// Parts of shared-part items: counted as worth celebrating, but with no value of their own.
+for (const { output, materials } of parsed) {
+	if (!SHARED_PARTS.test(output) || (worth.get(output) ?? 0) < MIN_COMPONENT_OUTPUT_VALUE) continue;
+	for (const material of materials) {
+		if (material !== 'Coins' && !tradeable.has(material) && !valueOf.has(material)) valueOf.set(material, 0);
+	}
+}
+const sourcesOf = new Map();
+for (const row of rows) {
+	if (!valueOf.has(row.item_name) || tradeable.has(row.item_name) || row.item_name === 'Coins') continue;
+	const set = sourcesOf.get(row.item_name) ?? new Set();
+	set.add(normalize(row.page_name));
+	sourcesOf.set(row.item_name, set);
+}
+const components = [...sourcesOf.keys()].sort().map((name) => ({ name, value: valueOf.get(name), sources: [...sourcesOf.get(name)].sort() }));
 
 writeFileSync(new URL('wiki-drops.json', OUT_DIR), JSON.stringify(drops));
 writeFileSync(new URL('collection-log.json', OUT_DIR), JSON.stringify({ items: clogItems, sources }));
-writeFileSync(new URL('valuable-components.json', OUT_DIR), JSON.stringify([...components].sort()));
-console.log(`wrote ${Object.keys(drops).length} monsters, ${clogItems.length} log items, ${components.size} valuable components, `
+writeFileSync(new URL('valuable-components.json', OUT_DIR), JSON.stringify(components));
+console.log(`wrote ${Object.keys(drops).length} monsters, ${clogItems.length} log items, ${components.length} valuable components, `
 	+ `${Object.keys(sources).length} monsters with log drops`);

@@ -25,6 +25,27 @@ public class ValuableComponentsTest
 	}
 
 	@Test
+	public void eachComponentIsWorthWhatItEndsUpAs()
+	{
+		// Ultor vestige -> Ultor icon -> Ultor ring (about 110m).
+		assertTrue(components.valueOf("Ultor vestige") > 100_000_000L);
+		assertTrue(components.valueOf("Mokhaiotl cloth") > 50_000_000L);
+		assertTrue(components.valueOf("Araxyte fang") > 20_000_000L);
+		// Soulreaper axe parts: worth celebrating, but not valued at the whole axe.
+		assertTrue(components.contains("Eye of the Duke"));
+		org.junit.Assert.assertEquals(0, components.valueOf("Eye of the Duke"));
+		org.junit.Assert.assertEquals(0, components.valueOf("Executioner's axe head"));
+	}
+
+	@Test
+	public void componentsKnowWhichSourceDropsThem()
+	{
+		assertTrue(components.dropsFrom("Vardorvis").contains("Ultor vestige"));
+		assertTrue(components.dropsFrom("Duke Sucellus").contains("Magus vestige"));
+		assertTrue(components.dropsFrom("Zulrah").isEmpty());
+	}
+
+	@Test
 	public void thingsYouMakeButNeverGetAsADropAreNot()
 	{
 		// Icons and the infernal chunk are crafted, and the crystal weapon line is left alone on purpose.

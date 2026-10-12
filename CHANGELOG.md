@@ -4,6 +4,7 @@
 
 - Fix: a win no longer keeps flashing while you keep killing the same monster; it ends after Celebration Seconds
 - Repeat untradeable uniques (e.g. Xeric's talisman) no longer count as wins unless they are new to your log, a pet, or a part of an expensive item (icons, fangs, Mokhaiotl cloth...)
+- Untradeable drops that craft into expensive items (vestiges, Araxyte fang, Mokhaiotl cloth...) are valued at the price of what they become, so Vardorvis counts the Ultor vestige as a 110m drop. Soulreaper axe parts just count as worth celebrating
 - "New to your log" is only trusted when RuneProfile sync has the whole log; otherwise the game's own new-collection-log message is used, so an item you already own no longer flashes as new
 - A second big odds number (Show Second Odds Number) with a position setting; Steady now ranges about 6-72%
 - Drift profiles last 10-15 minutes on an internal clock and only change after a finished kill or action, whatever the activity

@@ -963,6 +963,14 @@ public class DropMarketPlugin extends Plugin
 	{
 		List<String> table = new ArrayList<>(fullTable);
 		table.removeIf(item -> isBlacklisted(source, fullTable, item));
+		// Untradeable drops that become something expensive (the Ultor vestige from Vardorvis) are valued by what they become.
+		for (String component : valuableComponents.dropsFrom(source))
+		{
+			if (!tableContains(table, component) && !isBlacklisted(source, fullTable, component))
+			{
+				table.add(component);
+			}
+		}
 		String picked = MarketPicker.pick(table, DropTables.isPetFirst(source), config.marketMinimumValue(),
 			this::priceOf, item -> isLockedSlot(item, fromWiki));
 		if (DropTables.isPetFirst(source))
@@ -1034,6 +1042,15 @@ public class DropMarketPlugin extends Plugin
 				break;
 			}
 		}
+		if (price == DropQualifier.NO_PRICE)
+		{
+			// No GE price of its own: worth what it ends up as once crafted (0 if it has no assigned value).
+			long derived = valuableComponents.valueOf(name);
+			if (derived > 0)
+			{
+				price = derived;
+			}
+		}
 		priceCache.put(key, price);
 		return price;
 	}
@@ -1064,7 +1081,7 @@ public class DropMarketPlugin extends Plugin
 			// Any item from the monster/event's own notable table is worth celebrating - even one
 			// already in the collection log - not just whichever single item the market happened to
 			// be betting on (e.g. landing Osmumten's fang while the market was showing Tumeken's shadow).
-			boolean onTable = tableContains(table, name);
+			boolean onTable = tableContains(table, name) || tableContains(valuableComponents.dropsFrom(marketSource), name);
 			boolean slot = clog.isSlot(name);
 			boolean logDrop = uniqueDrops.isLogDrop(marketSource, name);
 			// A log item you haven't got yet opens a new collection log slot; repeats of common ones get price-checked.

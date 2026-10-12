@@ -154,7 +154,7 @@ Don't be that. Rules for anything we run (tools, workflows, and any ad-hoc fetch
 
 A drop is a win via `DropQualifier`: **blacklist** never wins and **priority** always wins; otherwise Pop Off wins
 everything; a collection log item **new to the account** wins (only trusted when the whole log is known via RuneProfile; otherwise the game's own "New item added to your collection log" message is the signal); before prices load only known log slots win; an item with
-new tradeable content the GE hasn't priced yet (`NOT_PRICED_YET`) wins if it's a real chase (on the table, the market's target, or a log slot); an **untradeable** item (`NO_PRICE`) only wins if it's new to the log, a pet, or a part of an expensive item (`valuable-components.json`, built from wiki recipes + GE prices); a priced item must be on the
+new tradeable content the GE hasn't priced yet (`NOT_PRICED_YET`) wins if it's a real chase (on the table, the market's target, or a log slot); an **untradeable** item (`NO_PRICE`) only wins if it's new to the log or a pet; untradeable drops that craft into expensive items (`valuable-components.json`, built from wiki recipes + GE prices) are priced at what they become (`ValuableComponents.valueOf`, used inside `priceOf`), except Soulreaper axe parts which are value 0 and just celebrated; a priced item must be on the
 table/target and reach the **Win Minimum Drop Value**. Chat messages ("Valuable drop", "Untradeable drop", new log
 item) go through the same rules. Odds drift via `DriftProfile` on a 10–15 minute internal clock that only switches after
 a finished kill/action and carries over between activities.

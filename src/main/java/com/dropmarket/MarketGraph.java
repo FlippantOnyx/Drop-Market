@@ -21,6 +21,9 @@ class MarketGraph
 	// Each step is a straight run (sharp corners, now and then flat) plus the lively jitter the line always had.
 	private static final double JITTER = 0.5;
 	private static final double RUN_SIZE = 1.0;
+	private static final double JUMP_CHANCE = 0.14;
+	private static final double JUMP_MIN = 5;
+	private static final double JUMP_SPAN = 8;
 
 	private final Random random;
 	private final double[] points = new double[POINTS];
@@ -46,6 +49,8 @@ class MarketGraph
 	// Like a real market chart the line moves in straight runs with sharp corners and flat stretches, not constant jitter.
 	private double slope;
 	private int slopeLeft;
+	// After a sudden jump the price sits flat for a few steps, like a real order-book chart.
+	private int holdAfterJump;
 
 	MarketGraph(Random random)
 	{
@@ -85,6 +90,7 @@ class MarketGraph
 		highDwell = 0;
 		liftSteps = 0;
 		slopeLeft = 0;
+		holdAfterJump = 0;
 		volume = 50_000L + (long) (random.nextDouble() * 5_000_000L);
 		push(clamp(anchor + random.nextGaussian() * 6, anchor));
 		for (int i = 1; i < POINTS; i++)
@@ -143,7 +149,9 @@ class MarketGraph
 		}
 		double drift = (anchor - last) * 0.08;
 		// A climb out of a low patch replaces the current run, so a downward run can't fight it.
-		double move = (liftSteps > 0 ? 0 : nextRun()) + random.nextGaussian() * profile.noise * JITTER;
+		double run = liftSteps > 0 ? 0 : nextRun();
+		// A flat stretch is nearly flat: only a hint of wiggle.
+		double move = run + random.nextGaussian() * profile.noise * (run == 0 ? JITTER * 0.3 : JITTER);
 		if (liftSteps > 0)
 		{
 			// Climbing out of a low patch: a steady push on top of the anchor pull.
@@ -169,8 +177,24 @@ class MarketGraph
 	{
 		if (slopeLeft <= 0)
 		{
-			slopeLeft = 2 + random.nextInt(4);
-			slope = random.nextDouble() < 0.12 ? 0 : random.nextGaussian() * profile.noise * RUN_SIZE;
+			if (holdAfterJump > 0)
+			{
+				slopeLeft = holdAfterJump;
+				slope = 0;
+				holdAfterJump = 0;
+			}
+			else if (random.nextDouble() < JUMP_CHANCE)
+			{
+				// One sudden leap, then a plateau.
+				slopeLeft = 1;
+				slope = (random.nextBoolean() ? 1 : -1) * (JUMP_MIN + random.nextDouble() * JUMP_SPAN);
+				holdAfterJump = 3 + random.nextInt(4);
+			}
+			else
+			{
+				slopeLeft = 2 + random.nextInt(4);
+				slope = random.nextDouble() < 0.12 ? 0 : random.nextGaussian() * profile.noise * RUN_SIZE;
+			}
 		}
 		slopeLeft--;
 		return slope;

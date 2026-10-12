@@ -50,7 +50,7 @@ final class MarketPainter
 	private static final int PAIR_GAP = 10;
 	private static final int SCROLL_GAP = 28;
 	// The drawn line only moves once the odds have changed by this many points, so it holds flat and then turns sharply.
-	private static final double RIGID_STEP = 2.5;
+	private static final double RIGID_STEP = 1.4;
 	private static final int SCROLL_PX_PER_TICK = 8;
 
 	private MarketPainter()

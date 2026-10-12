@@ -2,6 +2,7 @@
 
 ## 1.2.0
 
+- Odds now move in "drift profiles": Steady (everyday), Climber (rises toward ~90 as a fight nears its end), Choppy, Sleeper, Spike and Fader; everyday highs top out around 82
 - Overlay Layout setting: Full, Compact (two rows with a sparkline, wiki abbreviations like ToB) or Ticker (a single scrolling line)
 - Optional Win Sound using built-in game sounds
 - Both lines now flash purple on a win when the second line is shown

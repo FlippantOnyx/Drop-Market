@@ -256,7 +256,8 @@ final class MarketPainter
 		String pctText = Math.round(graph.current()) + "%";
 		g.setFont(bigFont);
 		String pct2 = secondLine == null ? null : Math.round(secondLine.current()) + "%";
-		int dx = drawOdds(g, PAD, pctBaseline, w - PAD - 24, false, bigFont, smallFont, accent, accent2, pctText, pct2, delta1,
+		// The numbers sit 2px lower than the row they were laid out on; the sparkline keeps its place.
+		int dx = drawOdds(g, PAD, pctBaseline + 2, w - PAD - 24, false, bigFont, smallFont, accent, accent2, pctText, pct2, delta1,
 			delta2, config);
 
 		int sparkLeft = dx + 12;
@@ -310,24 +311,22 @@ final class MarketPainter
 		int groupGap = 10;
 		int group1W = titleFm.stringWidth(pct1) + 6 + d1W;
 		int group2W = secondNumber ? titleFm.stringWidth(pct2) + 6 + d2W : secondDelta ? d2W : 0;
-		// The numbers sit 2px lower than the title so the two read as one level.
-		int numBaseline = baseline + 2;
 		int startX = right - (group1W + (group2W > 0 ? groupGap + group2W : 0));
 		int x = startX;
 		g.setFont(titleFont);
-		text(g, pct1, x, numBaseline, accent);
+		text(g, pct1, x, baseline, accent);
 		x += titleFm.stringWidth(pct1) + 6;
-		x += drawDelta(g, x, numBaseline, delta1, accent, config.line1FallingColor(), smallFont);
+		x += drawDelta(g, x, baseline, delta1, accent, config.line1FallingColor(), smallFont);
 		if (group2W > 0)
 		{
 			x += groupGap;
 			if (secondNumber)
 			{
 				g.setFont(titleFont);
-				text(g, pct2, x, numBaseline, accent2);
+				text(g, pct2, x, baseline, accent2);
 				x += titleFm.stringWidth(pct2) + 6;
 			}
-			drawDelta(g, x, numBaseline, delta2, accent2, config.line2FallingColor(), smallFont);
+			drawDelta(g, x, baseline, delta2, accent2, config.line2FallingColor(), smallFont);
 		}
 		Font tickerTitleFont = smallFont.deriveFont(Font.BOLD);
 		g.setFont(tickerTitleFont);

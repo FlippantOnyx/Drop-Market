@@ -130,6 +130,9 @@ public class DropMarketPlugin extends Plugin
 	private Guard guard;
 
 	@Inject
+	private ProfileStore profileStore;
+
+	@Inject
 	private DropMarketConfig config;
 
 	@Inject
@@ -232,6 +235,7 @@ public class DropMarketPlugin extends Plugin
 	@Override
 	protected void startUp()
 	{
+		guard.run("startUp settings", this::migrateLegacyValues);
 		guard.run("startUp", this::resetState);
 		// The overlay goes up even if resetting hit a problem, so the plugin never half-starts.
 		guard.run("startUp overlay", () -> overlayManager.add(overlay));
@@ -242,6 +246,45 @@ public class DropMarketPlugin extends Plugin
 				clientThread.invoke(() -> guard.run("collection log load", clog::load));
 			}
 		});
+	}
+
+	private long winMinimumGp()
+	{
+		return ValueUnit.toGp(config.valueUnit(), config.winMinimumAmount());
+	}
+
+	private long marketMinimumGp()
+	{
+		return ValueUnit.toGp(config.valueUnit(), config.marketMinimumAmount());
+	}
+
+	/**
+	 * The two drop-value settings used to be plain gp under other keys. The first time this runs after the change they
+	 * are carried over into thousands, so nobody's thresholds silently reset.
+	 */
+	private void migrateLegacyValues()
+	{
+		migrateLegacyValue("minimumDropValue", "marketMinimumAmount");
+		migrateLegacyValue("valuableDropThreshold", "winMinimumAmount");
+	}
+
+	private void migrateLegacyValue(String oldKey, String newKey)
+	{
+		String old = profileStore.getSetting(oldKey);
+		if (old == null || profileStore.getSetting(newKey) != null)
+		{
+			return;
+		}
+		try
+		{
+			long gp = Long.parseLong(old.trim());
+			long thousands = Math.min(100_000L, gp <= 0 ? 0 : Math.max(1L, Math.round(gp / 1000.0)));
+			profileStore.setSetting(newKey, String.valueOf(thousands));
+		}
+		catch (NumberFormatException e)
+		{
+			log.debug("Ignoring old value {} for {}", old, oldKey);
+		}
 	}
 
 	private void resetState()
@@ -769,8 +812,8 @@ public class DropMarketPlugin extends Plugin
 				}
 				boolean newLogItem = DropQualifier.isNewLogItem(uniqueDrops.isLogDrop(currentSource(), item), clog.hasFullLog(),
 					clog.isObtained(item));
-				if (DropQualifier.valuableMessageQualifies(value, config.winMinimumValue(), newLogItem,
-					listStatusHere(item), config.popOffOnEveryDrop()))
+				if (DropQualifier.valuableMessageQualifies(value, winMinimumGp(), newLogItem,
+					listStatusHere(item), config.resolveWinOnEveryDrop()))
 				{
 					celebrateDrop(item);
 				}
@@ -783,7 +826,7 @@ public class DropMarketPlugin extends Plugin
 				if (DropQualifier.untradeableMessageQualifies(DropQualifier.isNewLogItem(uniqueDrops.isLogDrop(currentSource(), item),
 					clog.hasFullLog(), clog.isObtained(item)),
 					keepsValue(item), table == null,
-					listStatusHere(item), config.popOffOnEveryDrop()))
+					listStatusHere(item), config.resolveWinOnEveryDrop()))
 				{
 					celebrateDrop(item);
 				}
@@ -1229,7 +1272,7 @@ public class DropMarketPlugin extends Plugin
 		{
 			return "Unsired";
 		}
-		String picked = MarketPicker.pick(table, DropTables.isPetFirst(source), config.marketMinimumValue(),
+		String picked = MarketPicker.pick(table, DropTables.isPetFirst(source), marketMinimumGp(),
 			this::priceOf, item -> isLockedSlot(item, fromWiki));
 		if (DropTables.isPetFirst(source))
 		{
@@ -1344,7 +1387,7 @@ public class DropMarketPlugin extends Plugin
 			return;
 		}
 		boolean clogChanged = false;
-		boolean popOff = config.popOffOnEveryDrop();
+		boolean popOff = config.resolveWinOnEveryDrop();
 		String hitItem = null;
 		boolean hitOnTable = false;
 		long hitPrice = Long.MIN_VALUE;
@@ -1366,7 +1409,7 @@ public class DropMarketPlugin extends Plugin
 			boolean logDrop = uniqueDrops.isLogDrop(marketSource, name);
 			// A log item you haven't got yet opens a new collection log slot; repeats of common ones get price-checked.
 			boolean newLogItem = DropQualifier.isNewLogItem(logDrop, clog.hasFullLog(), clog.isObtained(name));
-			boolean qualifies = DropQualifier.lootQualifies(price, config.winMinimumValue(), onTable, isTarget,
+			boolean qualifies = DropQualifier.lootQualifies(price, winMinimumGp(), onTable, isTarget,
 				slot, newLogItem, keepsValue(name), listStatus(marketSource, table, name), popOff);
 			// A part of a multi-part item: remember we hold it now (valued above, before it counted as owned).
 			List<String> setParts = valuableComponents.partsOf(name);
@@ -1412,10 +1455,10 @@ public class DropMarketPlugin extends Plugin
 		}
 	}
 
-	/** Celebrates a drop that already qualified; with Pop Off a loot event and its chat message count once. */
+	/** Celebrates a drop that already qualified; with Resolve Win on Every Drop a loot event and its chat message count once. */
 	private void celebrateDrop(String item)
 	{
-		if (config.popOffOnEveryDrop() && resolved && resolvedTick == ticks)
+		if (config.resolveWinOnEveryDrop() && resolved && resolvedTick == ticks)
 		{
 			return;
 		}

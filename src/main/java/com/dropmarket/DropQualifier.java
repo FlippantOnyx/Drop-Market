@@ -27,8 +27,8 @@ final class DropQualifier
 	}
 
 	/**
-	 * A received item. The lists trump everything: a blacklisted item never counts (not even under Pop Off), and a
-	 * priority item always counts, whatever it's worth. Otherwise Pop Off counts everything; a collection log
+	 * A received item. The lists trump everything: a blacklisted item never counts (not even under Resolve Win on Every Drop), and a
+	 * priority item always counts, whatever it's worth. Otherwise Resolve Win on Every Drop counts everything; a collection log
 	 * item new to the account always counts (a log drop that isn't new is price-checked like any other drop); before
 	 * prices load only a collection log slot counts; an unpriced item counts when it's a known chase (on the table, the market's own target, or a collection log
 	 * slot) since it can't be judged on value; and a priced item must be on the table or be the target and clear the

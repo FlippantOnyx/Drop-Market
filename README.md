@@ -14,7 +14,7 @@ _Rows: Full, Compact and Ticker. Columns: one line, a second line with its numbe
 - Pets get a rare chance of being featured too, logged or not.
 - Idle for a while and it resets back to LIVE ODDS.
 
-A drop only counts as a win if it's worth at least the **Win Minimum Drop Value** (2m by default). Items with no GE price — untradeable, or brand new content the GE hasn't priced yet — count if they're a real collection log chase, so new raid uniques work from day one. A collection log item new to your account always counts, whatever it's worth. Repeats of common log items (demon tears, bolt racks) are price-checked against Win Minimum Drop Value like any other drop.
+A drop only counts as a win if it's worth at least the **Win Minimum Drop Value** (2m by default, entered in k, m or b). Items with no GE price — untradeable, or brand new content the GE hasn't priced yet — count if they're a real collection log chase, so new raid uniques work from day one. A collection log item new to your account always counts, whatever it's worth. Repeats of common log items (demon tears, bolt racks) are price-checked against Win Minimum Drop Value like any other drop.
 
 ## Settings
 
@@ -22,9 +22,9 @@ A drop only counts as a win if it's worth at least the **Win Minimum Drop Value*
 - Colors for both lines, both header bars, and their text
 - A second, independently-moving line and a second header bar, each optional
 - **Priority drops** (always a win, and bet on instead of the default pick) and a **blacklist** (never bet on or celebrated; trumps everything) (`Source: Item` per line)
-- **Win Minimum Drop Value** (what counts as a win) and **Market Minimum Drop Value** (which monsters get a market)
+- **Win Minimum Drop Value** (what counts as a win) and **Market Minimum Drop Value** (which monsters get a market), in the denomination chosen under **Value Units** (k by default)
 - **Overlay Layout**: Full, Compact or Ticker
-- **Flash Purple on Win**, **Win Sound** (built-in game sounds), **Celebration Seconds**, and **Pop Off on Every Drop** (every drop is a win)
+- **Flash Purple on Win**, **Win Sound** (built-in game sounds), **Celebration Seconds**, and **Resolve Win on Every Drop** (every drop is a win)
 - Optional RuneProfile sync, and optional live OSRS Wiki lookups for monsters missing from the bundled tables
 
 Alt-drag the bottom-right corner to resize the overlay.

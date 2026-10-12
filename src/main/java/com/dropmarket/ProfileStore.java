@@ -32,6 +32,32 @@ class ProfileStore
 		}
 	}
 
+	/** A setting from the profile itself (not the RuneScape account), e.g. one an older version saved; null if unset. */
+	String getSetting(String key)
+	{
+		try
+		{
+			return configManager.getConfiguration(DropMarketConfig.GROUP, key);
+		}
+		catch (Exception e)
+		{
+			log.debug("Could not read setting {}", key, e);
+			return null;
+		}
+	}
+
+	void setSetting(String key, String value)
+	{
+		try
+		{
+			configManager.setConfiguration(DropMarketConfig.GROUP, key, value);
+		}
+		catch (Exception e)
+		{
+			log.debug("Could not save setting {}", key, e);
+		}
+	}
+
 	void set(String key, String value)
 	{
 		try

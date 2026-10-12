@@ -2,6 +2,8 @@ package com.dropmarket;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import java.awt.Color;
 import java.awt.Graphics2D;
@@ -36,11 +38,18 @@ public class MarketPainterTest
 		String bar2Text = "";
 		OverlayLayout layout = OverlayLayout.FULL;
 		boolean showSecondNumber;
+		boolean showBothDeltas = true;
 
 		@Override
 		public boolean showSecondNumber()
 		{
 			return showSecondNumber;
+		}
+
+		@Override
+		public boolean showBothDeltas()
+		{
+			return showBothDeltas;
 		}
 
 		@Override
@@ -276,14 +285,87 @@ public class MarketPainterTest
 		String full = "Theatre of Blood drops Scythe of vitur";
 		assertEquals("TOB DROPS SCYTHE OF VITUR", MarketPainter.compactTitle(full, chars, 40));
 		assertEquals("DROPS SCYTHE OF VITUR", MarketPainter.compactTitle(full, chars, 24));
-		assertEquals("DROPS SCYTHE", MarketPainter.compactTitle(full, chars, 14));
+		// Never cut the item short: when nothing fits whole the caller scrolls the title.
+		assertNull(MarketPainter.compactTitle(full, chars, 14));
 		assertEquals("TOB DROPS TWISTED BOW",
 			MarketPainter.compactTitle("Chambers of Xeric drops Twisted bow", chars, 40).replace("COX", "TOB"));
 		assertEquals("COX DROPS TWISTED BOW", MarketPainter.compactTitle("Chambers of Xeric drops Twisted bow", chars, 40));
 		assertEquals("ZULRAH DROPS TANZANITE FANG", MarketPainter.compactTitle("Zulrah drops Tanzanite fang", chars, 40));
 		assertEquals("KBD DROPS DRAGON PICKAXE", MarketPainter.compactTitle("King Black Dragon drops Dragon pickaxe", chars, 40));
 		assertEquals("LIVE ODDS", MarketPainter.compactTitle("LIVE ODDS", chars, 40));
-		assertEquals("GETS SCYTHE", MarketPainter.compactTitle("Bob GETS Scythe of vitur", chars, 12));
+		assertNull(MarketPainter.compactTitle("Bob GETS Scythe of vitur", chars, 12));
+		assertEquals("DROPS DRAGON WARHAMMER",
+			MarketPainter.compactTitle("Lizardman shaman drops Dragon warhammer", chars, 22));
+		assertNull(MarketPainter.compactTitle("Lizardman shaman drops Dragon warhammer", chars, 21));
+	}
+
+	@Test
+	public void compactTitleScrollsInsteadOfCuttingTheItemShort() throws Exception
+	{
+		TestConfig config = new TestConfig();
+		config.layout = OverlayLayout.COMPACT;
+		int h = MarketPainter.layoutHeight(config);
+		String title = "Lizardman shaman drops Dragon warhammer";
+		// 140px is too narrow for "DROPS DRAGON WARHAMMER" next to the badge, so it scrolls tick to tick.
+		BufferedImage first = render(title, false, 0, 140, h, config, null, 0);
+		BufferedImage later = render(title, false, 3, 140, h, config, null, 0);
+		assertTrue(differs(first, later));
+		assertEquals("LIZARDMAN SHAMAN DROPS DRAGON WARHAMMER", MarketPainter.abbreviatedTitle(title));
+	}
+
+	@Test
+	public void fullTitleScrollsOnlyWhenTwoLinesCannotHoldIt() throws Exception
+	{
+		java.awt.FontMetrics fm = new java.awt.Canvas().getFontMetrics(FontManager.getRunescapeBoldFont());
+		assertNotNull(MarketPainter.titleLines("Lizardman shaman drops Dragon warhammer", fm, 190));
+		assertEquals(2, MarketPainter.titleLines("Lizardman shaman drops Dragon warhammer", fm, 190).size());
+		assertNull(MarketPainter.titleLines("Lizardman shaman drops an extremely long suffix that cannot ever fit", fm, 190));
+		// A single word wider than the box can't wrap, so it scrolls too.
+		assertNull(MarketPainter.titleLines("Supercalifragilisticexpialidocious Supercalifragilisticexpialidocious", fm, 60));
+	}
+
+	@Test
+	public void compactKeepsItsSparklineWithTwoBigNumbers() throws Exception
+	{
+		TestConfig config = new TestConfig();
+		config.layout = OverlayLayout.COMPACT;
+		config.showSecondLine = true;
+		config.showSecondNumber = true;
+		int h = MarketPainter.layoutHeight(config);
+		BufferedImage img = render("Zulrah drops Tanzanite fang", false, 0, 200, h, config, secondGraph(), 0);
+		save(img, "compact-two-numbers");
+		// The sparkline lives in the right-hand part of the lower row; line 1's color must show up there.
+		BufferedImage sparkArea = img.getSubimage(150, h / 2, 50, h / 2);
+		assertTrue(containsColor(sparkArea, DropMarketConfig.DEFAULT_LINE_COLOR));
+	}
+
+	@Test
+	public void bothDeltasCanBeTurnedOff() throws Exception
+	{
+		TestConfig on = new TestConfig();
+		on.showSecondLine = true;
+		on.showSecondNumber = true;
+		TestConfig off = new TestConfig();
+		off.showSecondLine = true;
+		off.showSecondNumber = true;
+		off.showBothDeltas = false;
+		for (OverlayLayout layout : OverlayLayout.values())
+		{
+			on.layout = layout;
+			off.layout = layout;
+			int h = layout == OverlayLayout.FULL ? H : MarketPainter.layoutHeight(on);
+			BufferedImage withBoth = render("Zulrah drops Tanzanite fang", false, 0, 320, h, on, secondGraph(), 0);
+			BufferedImage withOne = render("Zulrah drops Tanzanite fang", false, 0, 320, h, off, secondGraph(), 0);
+			save(withOne, "one-delta-" + layout);
+			assertTrue(layout + " should differ", differs(withBoth, withOne));
+		}
+	}
+
+	private static MarketGraph secondGraph()
+	{
+		MarketGraph graph = new MarketGraph(new Random(99));
+		graph.reset();
+		return graph;
 	}
 
 	@Test

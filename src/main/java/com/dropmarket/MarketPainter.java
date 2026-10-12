@@ -43,6 +43,9 @@ final class MarketPainter
 	// Spacing in the odds row: big number to its change, between the two numbers, and between two changes.
 	private static final int CHANGE_GAP = 7;
 	private static final int GROUP_GAP = 14;
+	// The same gaps, tightened for compact's two smaller numbers so the sparkline keeps its room.
+	private static final int TIGHT_CHANGE_GAP = 5;
+	private static final int TIGHT_GROUP_GAP = 10;
 	private static final int PAIR_GAP = 10;
 	private static final int SCROLL_GAP = 28;
 	private static final int SCROLL_PX_PER_TICK = 8;
@@ -150,20 +153,31 @@ final class MarketPainter
 			}
 			y += Math.max(smallFm.getHeight(), skullSize + 2) + 4;
 
-			List<String> lines = wrap(title.toUpperCase(), titleFm, w - PAD * 2, 2);
+			List<String> lines = titleLines(title, titleFm, w - PAD * 2);
 			g.setFont(titleFont);
-			for (String line : lines)
+			if (lines == null)
 			{
+				// Too long even for two lines with the wiki short name: one line that scrolls like the ticker.
 				y += titleFm.getAscent();
-				text(g, line, PAD, y, TITLE);
+				scrollText(g, abbreviatedTitle(title), titleFm, PAD, w - PAD, y, nowTick);
 				y += titleFm.getDescent();
+			}
+			else
+			{
+				for (String line : lines)
+				{
+					y += titleFm.getAscent();
+					text(g, line, PAD, y, TITLE);
+					y += titleFm.getDescent();
+				}
 			}
 
 			y += 3 + bigFm.getAscent();
 			int pct = (int) Math.round(graph.current());
 			String pctText = pct + "%";
 			String pct2 = secondLine == null ? null : Math.round(secondLine.current()) + "%";
-			drawOdds(g, PAD, y, w - PAD, true, bigFont, smallFont, accent, accent2, pctText, pct2, delta1, delta2, config);
+			// The changes sit 1px higher than the numbers' baseline in the full card.
+			drawOdds(g, PAD, y, w - PAD, true, false, 1, bigFont, smallFont, accent, accent2, pctText, pct2, delta1, delta2, config);
 			y += bigFm.getDescent();
 			g.setFont(smallFont);
 
@@ -248,16 +262,27 @@ final class MarketPainter
 			right -= 6;
 		}
 		g.setFont(titleFont);
-		text(g, compactTitle(title, titleFm::stringWidth, right - x), x, baseline, TITLE);
+		String fitted = compactTitle(title, titleFm::stringWidth, right - x);
+		if (fitted != null)
+		{
+			text(g, fitted, x, baseline, TITLE);
+		}
+		else
+		{
+			// Nothing short enough fits whole, so the full title scrolls instead of being cut off.
+			scrollText(g, abbreviatedTitle(title), titleFm, x, right, baseline, nowTick);
+		}
 		y += titleFm.getHeight() + 2;
 
 		int pctBaseline = y + bigFm.getAscent();
 		String pctText = Math.round(graph.current()) + "%";
-		g.setFont(bigFont);
 		String pct2 = secondLine == null ? null : Math.round(secondLine.current()) + "%";
-		// The numbers sit 2px lower than the row they were laid out on; the sparkline keeps its place.
-		int dx = drawOdds(g, PAD, pctBaseline + 3, w - PAD - 24, false, bigFont, smallFont, accent, accent2, pctText, pct2, delta1,
-			delta2, config);
+		// With two big numbers they shrink to the ticker's size so the sparkline still has room to show.
+		Font oddsFont = pct2 != null && config.showSecondNumber() ? titleFont : bigFont;
+		g.setFont(oddsFont);
+		// The numbers sit 3px lower than the row they were laid out on; the sparkline keeps its place.
+		int dx = drawOdds(g, PAD, pctBaseline + 3, w - PAD - 24, false, oddsFont == titleFont, 0, oddsFont, smallFont,
+			accent, accent2, pctText, pct2, delta1, delta2, config);
 
 		int sparkLeft = dx + 12;
 		int sparkRight = w - PAD - 3;
@@ -290,7 +315,7 @@ final class MarketPainter
 		int right = w - PAD;
 		int sparkW = w >= 260 ? 44 : 0;
 		// Only wide strips have room for the second line's change next to the odds.
-		boolean secondDelta = secondLine != null && w >= 300;
+		boolean secondDelta = secondLine != null && w >= 300 && config.showBothDeltas();
 		if (sparkW > 0)
 		{
 			int sparkLeft = right - sparkW;
@@ -306,10 +331,10 @@ final class MarketPainter
 		String pct1 = Math.round(graph.current()) + "%";
 		String pct2 = secondLine == null ? "" : Math.round(secondLine.current()) + "%";
 		int d1W = deltaWidth(g, delta1, smallFont);
-		int d2W = secondLine == null ? 0 : deltaWidth(g, delta2, smallFont);
+		int d2W = secondDelta ? deltaWidth(g, delta2, smallFont) : 0;
 		int groupGap = 10;
 		int group1W = titleFm.stringWidth(pct1) + 6 + d1W;
-		int group2W = secondNumber ? titleFm.stringWidth(pct2) + 6 + d2W : secondDelta ? d2W : 0;
+		int group2W = secondNumber ? titleFm.stringWidth(pct2) + (secondDelta ? 6 + d2W : 0) : secondDelta ? d2W : 0;
 		int startX = right - (group1W + (group2W > 0 ? groupGap + group2W : 0));
 		int x = startX;
 		g.setFont(titleFont);
@@ -325,7 +350,10 @@ final class MarketPainter
 				text(g, pct2, x, baseline, accent2);
 				x += titleFm.stringWidth(pct2) + 6;
 			}
-			drawDelta(g, x, baseline, delta2, accent2, config.line2FallingColor(), smallFont);
+			if (secondDelta)
+			{
+				drawDelta(g, x, baseline, delta2, accent2, config.line2FallingColor(), smallFont);
+			}
 		}
 		Font tickerTitleFont = smallFont.deriveFont(Font.BOLD);
 		g.setFont(tickerTitleFont);
@@ -343,8 +371,9 @@ final class MarketPainter
 	}
 
 	/**
-	 * The title for the compact layouts: "THEATRE OF BLOOD DROPS SCYTHE OF VITUR" becomes "TOB DROPS SCYTHE OF VITUR"
-	 * (the wiki's short name), then "DROPS SCYTHE OF VITUR", then "DROPS SCYTHE" if the room runs out.
+	 * The longest form of the title that fits whole in maxWidth: "THEATRE OF BLOOD DROPS SCYTHE OF VITUR" becomes
+	 * "TOB DROPS SCYTHE OF VITUR" (the wiki short name), then "DROPS SCYTHE OF VITUR". It never cuts the item short:
+	 * if neither fits it returns null and the caller scrolls the title instead.
 	 */
 	static String compactTitle(String title, ToIntFunction<String> width, int maxWidth)
 	{
@@ -352,21 +381,41 @@ final class MarketPainter
 		String verb = upper.contains(" DROPS ") ? " DROPS " : upper.contains(" GETS ") ? " GETS " : null;
 		if (verb == null)
 		{
-			return fit(upper, width, maxWidth);
+			return width.applyAsInt(upper) <= maxWidth ? upper : null;
 		}
 		int at = upper.indexOf(verb);
 		String item = upper.substring(at + verb.length());
 		String source = DropTables.abbreviation(title.substring(0, at)).toUpperCase();
-		String verbWord = verb.trim();
-		String firstWord = item.split(" ")[0];
-		for (String candidate : new String[]{source + verb + item, verbWord + " " + item, verbWord + " " + firstWord})
+		for (String candidate : new String[]{source + verb + item, verb.trim() + " " + item})
 		{
 			if (width.applyAsInt(candidate) <= maxWidth)
 			{
 				return candidate;
 			}
 		}
-		return fit(verbWord + " " + firstWord, width, maxWidth);
+		return null;
+	}
+
+	/**
+	 * The title as at most two lines for the Full card: the whole title if it wraps into two, else with the wiki short
+	 * name. Returns null when even that doesn't fit, and the caller scrolls it.
+	 */
+	static List<String> titleLines(String title, FontMetrics fm, int maxWidth)
+	{
+		for (String candidate : new String[]{title.toUpperCase(), abbreviatedTitle(title)})
+		{
+			List<String> lines = wrap(candidate, fm, maxWidth, Integer.MAX_VALUE);
+			boolean fits = lines.size() <= 2;
+			for (String line : lines)
+			{
+				fits &= fm.stringWidth(line) <= maxWidth;
+			}
+			if (fits)
+			{
+				return lines;
+			}
+		}
+		return null;
 	}
 
 	/** Source swapped for its wiki short name (ToB, CoX...), everything else untouched, upper-cased. */
@@ -395,16 +444,6 @@ final class MarketPainter
 		g.setClip(oldClip);
 	}
 
-	private static String fit(String s, ToIntFunction<String> width, int maxWidth)
-	{
-		String out = s;
-		while (out.length() > 1 && width.applyAsInt(out) > maxWidth)
-		{
-			out = out.substring(0, out.length() - 1);
-		}
-		return out.length() < s.length() ? out.trim() + "..." : out;
-	}
-
 	private static int deltaWidth(Graphics2D g, int delta, Font smallFont)
 	{
 		FontMetrics fm = g.getFontMetrics(deltaFont(smallFont));
@@ -416,20 +455,25 @@ final class MarketPainter
 	 * change sit at the right edge of the box (Full) or follow line 1's (Compact, which keeps the right for its
 	 * sparkline). Without the second number, line 2's change just follows line 1's. Returns where the row ended.
 	 */
-	private static int drawOdds(Graphics2D g, int startX, int baseline, int limit, boolean full, Font bigFont,
-		Font smallFont, Color accent, Color accent2, String pct1, String pct2, int delta1, int delta2,
-		DropMarketConfig config)
+	private static int drawOdds(Graphics2D g, int startX, int baseline, int limit, boolean full, boolean tight,
+		int deltaLift, Font bigFont, Font smallFont, Color accent, Color accent2, String pct1, String pct2, int delta1,
+		int delta2, DropMarketConfig config)
 	{
+		final int changeGap = tight ? TIGHT_CHANGE_GAP : CHANGE_GAP;
+		final int groupGap = tight ? TIGHT_GROUP_GAP : GROUP_GAP;
 		FontMetrics bigFm = g.getFontMetrics(bigFont);
+		int deltaBase = baseline - deltaLift;
+		boolean delta2On = pct2 != null && config.showBothDeltas();
 		int pct1W = bigFm.stringWidth(pct1);
 		int d1W = deltaWidth(g, delta1, smallFont);
-		int d2W = pct2 == null ? 0 : deltaWidth(g, delta2, smallFont);
+		int d2W = delta2On ? deltaWidth(g, delta2, smallFont) : 0;
 		int pct2W = pct2 == null ? 0 : bigFm.stringWidth(pct2);
+		int tail2 = delta2On ? changeGap + d2W : 0;
 		boolean number = pct2 != null && config.showSecondNumber();
 		int needed = 0;
 		if (number)
 		{
-			needed = pct1W + CHANGE_GAP + d1W + GROUP_GAP + pct2W + CHANGE_GAP + d2W;
+			needed = pct1W + changeGap + d1W + groupGap + pct2W + tail2;
 			number = startX + needed <= limit;
 		}
 
@@ -438,28 +482,33 @@ final class MarketPainter
 			int x = startX;
 			g.setFont(bigFont);
 			text(g, pct1, x, baseline, accent);
-			x += pct1W + CHANGE_GAP;
-			x += drawDelta(g, x, baseline, delta1, accent, config.line1FallingColor(), smallFont);
+			x += pct1W + changeGap;
+			x += drawDelta(g, x, deltaBase, delta1, accent, config.line1FallingColor(), smallFont);
 			// Line 2's readout hugs the right edge in Full; Compact keeps that side for its sparkline.
-			x = full ? limit - (pct2W + CHANGE_GAP + d2W) : x + GROUP_GAP;
+			x = full ? limit - (pct2W + tail2) : x + groupGap;
 			g.setFont(bigFont);
 			text(g, pct2, x, baseline, accent2);
-			x += pct2W + CHANGE_GAP;
-			return x + drawDelta(g, x, baseline, delta2, accent2, config.line2FallingColor(), smallFont);
+			x += pct2W;
+			if (!delta2On)
+			{
+				return x;
+			}
+			x += changeGap;
+			return x + drawDelta(g, x, deltaBase, delta2, accent2, config.line2FallingColor(), smallFont);
 		}
 
 		int x = startX;
 		g.setFont(bigFont);
 		text(g, pct1, x, baseline, accent);
-		x += pct1W + CHANGE_GAP;
-		x += drawDelta(g, x, baseline, delta1, accent, config.line1FallingColor(), smallFont);
-		if (pct2 == null)
+		x += pct1W + changeGap;
+		x += drawDelta(g, x, deltaBase, delta1, accent, config.line1FallingColor(), smallFont);
+		if (!delta2On)
 		{
 			return x;
 		}
 		// No second number: line 2's change simply follows line 1's.
 		x += PAIR_GAP;
-		return x + drawDelta(g, x, baseline, delta2, accent2, config.line2FallingColor(), smallFont);
+		return x + drawDelta(g, x, deltaBase, delta2, accent2, config.line2FallingColor(), smallFont);
 	}
 
 	/** Always renders (the delta should never disappear); the arrow is skipped only for an exact 0. */

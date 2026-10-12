@@ -13,6 +13,9 @@ gives a gameplay advantage or automates input (see "Jagex rules" below).
 
 - Plugin id/package: `com.dropmarket`; hub entry: `plugins/drop-market` in `runelite/plugin-hub`.
 - Version lives in `runelite-plugin.properties` (`version=`); keep `CHANGELOG.md` in step.
+- The two drop-value settings are `marketMinimumAmount` / `winMinimumAmount` in the unit chosen by `valueUnit` (k by default);
+  the old gp keys (`minimumDropValue`, `valuableDropThreshold`) are migrated once in `DropMarketPlugin.migrateLegacyValues`.
+  Config sections run Data Sources, Display, Drop Lists, Market Value, Celebration, Graph Line 1/2, Header Bar 1/2.
 - Repo: `TaikiShuttleRS/Drop-Market`, branch `main`, SSH remote.
 
 ## Hard rule: identity
@@ -187,7 +190,7 @@ and the overlay threw an `IllegalAccessError` into the client every frame. The r
 
 ## Wins, in one paragraph (so you don't re-derive it)
 
-A drop is a win via `DropQualifier`: **blacklist** never wins and **priority** always wins; otherwise Pop Off wins
+A drop is a win via `DropQualifier`: **blacklist** never wins and **priority** always wins; otherwise Resolve Win on Every Drop (`popOffOnEveryDrop`) wins
 everything; a collection log item **new to the account** wins (only trusted when the whole log is known via RuneProfile; otherwise the game's own "New item added to your collection log" message is the signal); before prices load only known log slots win; an item with
 new tradeable content the GE hasn't priced yet (`NOT_PRICED_YET`) wins if it's a real chase (on the table, the market's target, or a log slot); an **untradeable** item (`NO_PRICE`) only wins if it's new to the log or a pet; untradeable drops that craft into expensive items (`valuable-components.json`, built from wiki recipes + GE prices) are priced at what they become (`ValuableComponents.valueOf`, used inside `priceOf`), except Soulreaper axe parts which are value 0 and just celebrated; a priced item must be on the
 table/target and reach the **Win Minimum Drop Value**. Chat messages ("Valuable drop", "Untradeable drop", new log

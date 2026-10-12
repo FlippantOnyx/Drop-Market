@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.3.0
+
+- Long titles never get cut off: in Compact and Full a title that doesn't fit scrolls like the ticker (Full still wraps to two lines first), instead of "DROPS DRAGON"
+- Compact with the second odds number shrinks the numbers like the ticker does, so the sparkline is visible again
+- New "Show Both Delta Numbers" toggle (Graph Line 2); off shows only line 1's change
+- Full card: the change indicators sit 1px higher
+- "Pop Off on Every Drop" is now "Resolve Win on Every Drop" and lives in Celebration
+- The two drop values are entered in k by default, with a Value Units setting (k, m, b); your old gp values are carried over
+- Settings sections reordered by importance (Data Sources, Display, Drop Lists, Market Value, Celebration), with Graph Line 1/2 and Header Bar 1/2 split into their own sections
+
 ## 1.2.1
 
 - Fix: the overlay crashed the client when the plugin was installed (the config used package-private types RuneLite couldn't read)

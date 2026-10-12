@@ -95,6 +95,7 @@ public class PluginIntegrationTest
 	private static class StubProfileStore extends ProfileStore
 	{
 		private final Map<String, String> values = new HashMap<>();
+		private final Map<String, String> settings = new HashMap<>();
 
 		StubProfileStore()
 		{
@@ -111,6 +112,18 @@ public class PluginIntegrationTest
 		void set(String key, String value)
 		{
 			values.put(key, value);
+		}
+
+		@Override
+		String getSetting(String key)
+		{
+			return settings.get(key);
+		}
+
+		@Override
+		void setSetting(String key, String value)
+		{
+			settings.put(key, value);
 		}
 	}
 
@@ -284,13 +297,13 @@ public class PluginIntegrationTest
 		final DropMarketOverlay overlay;
 		final Guard guard;
 		final Client client;
+		final StubProfileStore store = new StubProfileStore();
 
 		Rig(Mode mode) throws Exception
 		{
 			client = client(mode);
 			OverlayManager overlays = allocate(OverlayManager.class);
 			ClientThread thread = allocate(StubClientThread.class);
-			ProfileStore store = new StubProfileStore();
 			ItemLookup items = new StubItemLookup(mode);
 			plugin = new DropMarketPlugin();
 			DropMarketConfig config = config();
@@ -517,6 +530,24 @@ public class PluginIntegrationTest
 			rig.render();
 		}
 		System.out.println("empty-event failures swallowed: " + rig.unexpectedFailures());
+	}
+
+	/** Older versions saved the two drop values in gp under other keys; they carry over into thousands, once. */
+	@Test
+	public void oldGpValuesMoveOverIntoThousands() throws Exception
+	{
+		Rig rig = new Rig(Mode.NORMAL);
+		rig.store.settings.put("minimumDropValue", "250000");
+		rig.store.settings.put("valuableDropThreshold", "2000000");
+		rig.plugin.startUp();
+		Assert.assertEquals("250", rig.store.settings.get("marketMinimumAmount"));
+		Assert.assertEquals("2000", rig.store.settings.get("winMinimumAmount"));
+
+		// A value already chosen in the new setting is never overwritten by the old one.
+		rig.store.settings.put("winMinimumAmount", "5000");
+		rig.plugin.startUp();
+		Assert.assertEquals("5000", rig.store.settings.get("winMinimumAmount"));
+		Assert.assertEquals(Collections.emptyList(), rig.unexpectedFailures());
 	}
 
 	@Test

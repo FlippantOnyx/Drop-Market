@@ -2,6 +2,7 @@
 
 ## 1.3.0
 
+- The odds lines move in straight runs with sharp corners and flat stretches, like a real market chart, instead of constant wiggle
 - Long titles never get cut off: in Compact and Full a title that doesn't fit scrolls like the ticker (Full still wraps to two lines first), instead of "DROPS DRAGON"
 - Compact with the second odds number shrinks the numbers like the ticker does, so the sparkline is visible again
 - New "Show Both Delta Numbers" toggle (Graph Line 2); off shows only line 1's change

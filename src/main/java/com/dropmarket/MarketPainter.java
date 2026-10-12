@@ -30,7 +30,8 @@ final class MarketPainter
 	private static final Font BAR_TEXT_FONT = new Font(Font.SANS_SERIF, Font.BOLD, 10);
 	private static final Stroke GRID_STROKE = new BasicStroke(1f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER,
 		10f, new float[]{2f, 3f}, 0f);
-	private static final Stroke LINE_STROKE = new BasicStroke(1.6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
+	// Mitered joins keep the corners of the line crisp, like a real market chart.
+	private static final Stroke LINE_STROKE = new BasicStroke(1.6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_MITER, 3f);
 	private static final int PAD = 6;
 	// All animation here steps once per game tick (0.6s) rather than wall-clock time, so it stays in lockstep
 	// with everything else OSRS does on the tick.

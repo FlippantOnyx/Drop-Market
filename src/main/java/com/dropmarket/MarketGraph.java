@@ -40,6 +40,9 @@ class MarketGraph
 	private int lowDwell;
 	private int highDwell;
 	private int liftSteps;
+	// Like a real market chart the line moves in straight runs with sharp corners and flat stretches, not constant jitter.
+	private double slope;
+	private int slopeLeft;
 
 	MarketGraph(Random random)
 	{
@@ -78,6 +81,7 @@ class MarketGraph
 		lowDwell = 0;
 		highDwell = 0;
 		liftSteps = 0;
+		slopeLeft = 0;
 		volume = 50_000L + (long) (random.nextDouble() * 5_000_000L);
 		push(clamp(anchor + random.nextGaussian() * 6, anchor));
 		for (int i = 1; i < POINTS; i++)
@@ -135,7 +139,8 @@ class MarketGraph
 			advanceProfile();
 		}
 		double drift = (anchor - last) * 0.08;
-		double move = random.nextGaussian() * profile.noise;
+		// A climb out of a low patch replaces the current run, so a downward run can't fight it.
+		double move = (liftSteps > 0 ? 0 : nextRun()) + random.nextGaussian() * profile.noise * 0.2;
 		if (liftSteps > 0)
 		{
 			// Climbing out of a low patch: a steady push on top of the anchor pull.
@@ -154,6 +159,18 @@ class MarketGraph
 		{
 			anchor = profile.rollAnchor(random);
 		}
+	}
+
+	/** The per-step move of the current straight run; when it ends, a new one starts (flat about a quarter of the time). */
+	private double nextRun()
+	{
+		if (slopeLeft <= 0)
+		{
+			slopeLeft = 2 + random.nextInt(5);
+			slope = random.nextDouble() < 0.25 ? 0 : random.nextGaussian() * profile.noise * 1.1;
+		}
+		slopeLeft--;
+		return slope;
 	}
 
 	/**

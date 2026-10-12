@@ -37,6 +37,8 @@ final class MarketPainter
 	private static final int DOT_PERIOD_TICKS = 1;
 	private static final int PULSE_PERIOD_TICKS = 3;
 	private static final int BRAND_BAR_H = 14;
+	private static final int COMPACT_BODY_H = 56;
+	private static final int TICKER_H = 24;
 
 	private MarketPainter()
 	{
@@ -65,8 +67,10 @@ final class MarketPainter
 				g.fill(panel);
 			}
 
+			OverlayLayout layout = config.overlayLayout();
+			boolean bars = layout != OverlayLayout.TICKER;
 			int y = 0;
-			if (config.showBar1())
+			if (bars && config.showBar1())
 			{
 				g.setColor(config.bar1Color());
 				g.fillRect(0, y, w, BRAND_BAR_H);
@@ -76,7 +80,7 @@ final class MarketPainter
 				}
 				y += BRAND_BAR_H;
 			}
-			if (config.showBar2())
+			if (bars && config.showBar2())
 			{
 				g.setColor(config.bar2Color());
 				g.fillRect(0, y, w, BRAND_BAR_H);
@@ -90,6 +94,19 @@ final class MarketPainter
 			g.setColor(flashOn ? RAID_PURPLE : BORDER);
 			g.setStroke(new BasicStroke(flashOn ? 2f : 1f));
 			g.draw(panel);
+
+			if (layout == OverlayLayout.COMPACT)
+			{
+				paintCompact(g, w, y, title, graph, secondLine, accent, accent2, config, nowTick, titleFont, smallFont,
+					badge, delta1, delta2);
+				return;
+			}
+			if (layout == OverlayLayout.TICKER)
+			{
+				paintTicker(g, w, h, title, graph, secondLine, accent, accent2, config, nowTick, titleFont, smallFont,
+					delta1, delta2);
+				return;
+			}
 
 			Font bigFont = titleFont.deriveFont(titleFont.getSize2D() * 1.25f);
 			FontMetrics titleFm = g.getFontMetrics(titleFont);
@@ -187,6 +204,129 @@ final class MarketPainter
 		{
 			g.dispose();
 		}
+	}
+
+	/** Height of the overlay for a layout; Full keeps whatever size the player resized it to (returns -1). */
+	static int layoutHeight(DropMarketConfig config)
+	{
+		switch (config.overlayLayout())
+		{
+			case COMPACT:
+				return (config.showBar1() ? BRAND_BAR_H : 0) + (config.showBar2() ? BRAND_BAR_H : 0) + COMPACT_BODY_H;
+			case TICKER:
+				return TICKER_H;
+			default:
+				return -1;
+		}
+	}
+
+	/** Two rows: live dot + title (+ badge), then the odds with their changes and a sparkline. */
+	private static void paintCompact(Graphics2D g, int w, int top, String title, MarketGraph graph,
+		MarketGraph secondLine, Color accent, Color accent2, DropMarketConfig config, long nowTick, Font titleFont,
+		Font smallFont, String badge, int delta1, int delta2)
+	{
+		FontMetrics titleFm = g.getFontMetrics(titleFont);
+		FontMetrics smallFm = g.getFontMetrics(smallFont);
+		Font bigFont = titleFont.deriveFont(titleFont.getSize2D() * 1.25f);
+		FontMetrics bigFm = g.getFontMetrics(bigFont);
+
+		int y = top + PAD;
+		int baseline = y + titleFm.getAscent();
+		int x = PAD;
+		int dotR = 3;
+		boolean dotOn = (nowTick / DOT_PERIOD_TICKS) % 2 == 0;
+		g.setColor(dotOn ? LIVE_RED : withAlpha(LIVE_RED, 80));
+		g.fill(new Ellipse2D.Double(x, baseline - titleFm.getAscent() / 2.0 - dotR - 1, dotR * 2, dotR * 2));
+		x += dotR * 2 + 5;
+
+		int right = w - PAD;
+		if (badge != null && !badge.isEmpty())
+		{
+			g.setFont(smallFont);
+			right -= smallFm.stringWidth(badge);
+			text(g, badge, right, baseline, MUTED);
+			right -= 6;
+		}
+		g.setFont(titleFont);
+		text(g, ellipsize(title.toUpperCase(), titleFm, right - x), x, baseline, TITLE);
+		y += titleFm.getHeight() + 2;
+
+		int pctBaseline = y + bigFm.getAscent();
+		String pctText = Math.round(graph.current()) + "%";
+		g.setFont(bigFont);
+		text(g, pctText, PAD, pctBaseline, accent);
+		int dx = PAD + bigFm.stringWidth(pctText) + 10;
+		dx += drawDelta(g, dx, pctBaseline, delta1, accent, config.line1FallingColor(), smallFont);
+		if (secondLine != null)
+		{
+			dx += 8 + drawDelta(g, dx + 8, pctBaseline, delta2, accent2, config.line2FallingColor(), smallFont);
+		}
+
+		int sparkLeft = dx + 12;
+		int sparkRight = w - PAD - 3;
+		if (sparkRight - sparkLeft >= 24)
+		{
+			int sparkTop = y + 2;
+			int sparkBottom = pctBaseline + bigFm.getDescent() - 2;
+			if (secondLine != null)
+			{
+				drawLine(g, secondLine, accent2, sparkLeft, sparkTop, sparkRight, sparkBottom, nowTick);
+			}
+			drawLine(g, graph, accent, sparkLeft, sparkTop, sparkRight, sparkBottom, nowTick);
+		}
+	}
+
+	/** One line: live dot, title, odds, change(s) and a small sparkline, like a stock ticker. */
+	private static void paintTicker(Graphics2D g, int w, int h, String title, MarketGraph graph,
+		MarketGraph secondLine, Color accent, Color accent2, DropMarketConfig config, long nowTick, Font titleFont,
+		Font smallFont, int delta1, int delta2)
+	{
+		FontMetrics titleFm = g.getFontMetrics(titleFont);
+		int baseline = (h + titleFm.getAscent() - titleFm.getDescent()) / 2;
+
+		int dotR = 3;
+		boolean dotOn = (nowTick / DOT_PERIOD_TICKS) % 2 == 0;
+		g.setColor(dotOn ? LIVE_RED : withAlpha(LIVE_RED, 80));
+		g.fill(new Ellipse2D.Double(PAD, h / 2.0 - dotR, dotR * 2, dotR * 2));
+		int titleLeft = PAD + dotR * 2 + 5;
+
+		int right = w - PAD;
+		int sparkW = w >= 260 ? 44 : 0;
+		// Only wide strips have room for the second line's change next to the odds.
+		boolean secondDelta = secondLine != null && w >= 300;
+		if (sparkW > 0)
+		{
+			int sparkLeft = right - sparkW;
+			if (secondLine != null)
+			{
+				drawLine(g, secondLine, accent2, sparkLeft, 4, right - 3, h - 4, nowTick);
+			}
+			drawLine(g, graph, accent, sparkLeft, 4, right - 3, h - 4, nowTick);
+			right = sparkLeft - 8;
+		}
+
+		int deltaW = deltaWidth(g, delta1, smallFont) + (secondDelta ? 8 + deltaWidth(g, delta2, smallFont) : 0);
+		int deltaX = right - deltaW;
+		int dx = deltaX + drawDelta(g, deltaX, baseline, delta1, accent, config.line1FallingColor(), smallFont);
+		if (secondDelta)
+		{
+			drawDelta(g, dx + 8, baseline, delta2, accent2, config.line2FallingColor(), smallFont);
+		}
+
+		String pctText = Math.round(graph.current()) + "%";
+		g.setFont(titleFont);
+		int pctX = deltaX - 8 - titleFm.stringWidth(pctText);
+		text(g, pctText, pctX, baseline, accent);
+		Font tickerTitleFont = smallFont.deriveFont(Font.BOLD);
+		g.setFont(tickerTitleFont);
+		text(g, ellipsize(title.toUpperCase(), g.getFontMetrics(tickerTitleFont), pctX - 8 - titleLeft), titleLeft,
+			baseline, TITLE);
+	}
+
+	private static int deltaWidth(Graphics2D g, int delta, Font smallFont)
+	{
+		FontMetrics fm = g.getFontMetrics(deltaFont(smallFont));
+		return (delta != 0 ? 11 : 0) + fm.stringWidth(Math.abs(delta) + "%");
 	}
 
 	/** Always renders (the delta should never disappear); the arrow is skipped only for an exact 0. */

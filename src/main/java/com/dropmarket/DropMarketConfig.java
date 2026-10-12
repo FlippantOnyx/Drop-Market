@@ -24,6 +24,7 @@ public interface DropMarketConfig extends Config
 	String SECTION_WINS = "winRules";
 	String SECTION_CELEBRATION = "celebration";
 	String SECTION_DATA = "dataSources";
+	String SECTION_DISPLAY = "display";
 	String SECTION_LINES = "graphLines";
 	String SECTION_BARS = "headerBars";
 
@@ -145,11 +146,23 @@ public interface DropMarketConfig extends Config
 	}
 
 	@ConfigItem(
+		keyName = "winSound",
+		name = "Win Sound",
+		description = "A built-in game sound to play on a win (uses your in-game sound effect volume)",
+		section = SECTION_CELEBRATION,
+		position = 2
+	)
+	default WinSound winSound()
+	{
+		return WinSound.OFF;
+	}
+
+	@ConfigItem(
 		keyName = "celebrationSeconds",
 		name = "Celebration Seconds",
 		description = "How long a win stays on screen before the overlay goes back to normal",
 		section = SECTION_CELEBRATION,
-		position = 2
+		position = 3
 	)
 	@Range(min = 5, max = 120)
 	@Units(Units.SECONDS)
@@ -158,12 +171,36 @@ public interface DropMarketConfig extends Config
 		return 15;
 	}
 
+	// ---- Display ----------------------------------------------------------------------------------------------
+
+	@ConfigSection(
+		name = "Display",
+		description = "How big the overlay is",
+		position = 4,
+		closedByDefault = true
+	)
+	String displaySection = SECTION_DISPLAY;
+
+	@ConfigItem(
+		keyName = "overlayLayout",
+		name = "Overlay Layout",
+		description = "Full: the whole card with chart, volume and axis.<br>"
+			+ "Compact: a short card with the title, odds and a sparkline.<br>"
+			+ "Ticker: a single line, like a stock ticker (header bars are hidden).",
+		section = SECTION_DISPLAY,
+		position = 1
+	)
+	default OverlayLayout overlayLayout()
+	{
+		return OverlayLayout.FULL;
+	}
+
 	// ---- Data sources (opt-in, third party) ---------------------------------------------------------------------
 
 	@ConfigSection(
 		name = "Data Sources",
 		description = "Optional lookups that contact third-party servers",
-		position = 4,
+		position = 5,
 		closedByDefault = true
 	)
 	String dataSourcesSection = SECTION_DATA;
@@ -201,7 +238,7 @@ public interface DropMarketConfig extends Config
 	@ConfigSection(
 		name = "Graph Lines",
 		description = "Colors of the two odds lines and their change indicators",
-		position = 5,
+		position = 6,
 		closedByDefault = true
 	)
 	String graphLinesSection = SECTION_LINES;
@@ -271,7 +308,7 @@ public interface DropMarketConfig extends Config
 	@ConfigSection(
 		name = "Header Bars",
 		description = "Two optional colored bars across the top of the overlay",
-		position = 6,
+		position = 7,
 		closedByDefault = true
 	)
 	String headerBarsSection = SECTION_BARS;

@@ -72,6 +72,16 @@ final class DropQualifier
 		return (onTable || isTarget) && price >= threshold;
 	}
 
+	/**
+	 * Whether a log drop is new to the account. Only trust our own record when we know the whole log (RuneProfile):
+	 * otherwise "not seen yet" just means the plugin hasn't watched you get it, and an item you already own would
+	 * flash as new. The game's own "New item added to your collection log" message covers genuinely new items.
+	 */
+	static boolean isNewLogItem(boolean logDrop, boolean fullLogKnown, boolean obtained)
+	{
+		return logDrop && fullLogKnown && !obtained;
+	}
+
 	/** The game's "Valuable drop" chat message; {@code value} is negative when it couldn't be determined. */
 	static boolean valuableMessageQualifies(long value, long threshold, boolean newLogItem, ListStatus list,
 		boolean popOff)

@@ -182,4 +182,16 @@ public class DropQualifierTest
 		assertFalse(DropQualifier.untradeableMessageQualifies(false, false, false, NONE, false));
 		assertTrue(DropQualifier.untradeableMessageQualifies(false, true, false, NONE, false));
 	}
+
+	@Test
+	public void newToTheLogIsOnlyTrustedWhenTheWholeLogIsKnown()
+	{
+		// Without RuneProfile the plugin can't tell an owned Xeric's talisman from a new one: not "new".
+		assertFalse(DropQualifier.isNewLogItem(true, false, false));
+		// With the whole log known, an item you don't have yet is new; one you have isn't.
+		assertTrue(DropQualifier.isNewLogItem(true, true, false));
+		assertFalse(DropQualifier.isNewLogItem(true, true, true));
+		// Not a log item at all (Hydra bones): never new.
+		assertFalse(DropQualifier.isNewLogItem(false, true, false));
+	}
 }

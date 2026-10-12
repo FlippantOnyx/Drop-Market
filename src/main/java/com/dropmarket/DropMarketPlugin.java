@@ -662,7 +662,8 @@ public class DropMarketPlugin extends Plugin
 					long price = priceOf(item);
 					value = price < 0 ? -1 : price;
 				}
-				boolean newLogItem = uniqueDrops.isLogDrop(currentSource(), item) && !clog.isObtained(item);
+				boolean newLogItem = DropQualifier.isNewLogItem(uniqueDrops.isLogDrop(currentSource(), item), clog.hasFullLog(),
+					clog.isObtained(item));
 				if (DropQualifier.valuableMessageQualifies(value, config.winMinimumValue(), newLogItem,
 					listStatusHere(item), config.popOffOnEveryDrop()))
 				{
@@ -674,7 +675,8 @@ public class DropMarketPlugin extends Plugin
 				// Only real chases count, not every untradeable the game announces.
 				String item = parseDropItem(raw);
 				List<String> table = currentTable();
-				if (DropQualifier.untradeableMessageQualifies(uniqueDrops.isLogDrop(currentSource(), item) && !clog.isObtained(item),
+				if (DropQualifier.untradeableMessageQualifies(DropQualifier.isNewLogItem(uniqueDrops.isLogDrop(currentSource(), item),
+					clog.hasFullLog(), clog.isObtained(item)),
 					keepsValue(item), table == null,
 					listStatusHere(item), config.popOffOnEveryDrop()))
 				{
@@ -1066,7 +1068,7 @@ public class DropMarketPlugin extends Plugin
 			boolean slot = clog.isSlot(name);
 			boolean logDrop = uniqueDrops.isLogDrop(marketSource, name);
 			// A log item you haven't got yet opens a new collection log slot; repeats of common ones get price-checked.
-			boolean newLogItem = logDrop && !clog.isObtained(name);
+			boolean newLogItem = DropQualifier.isNewLogItem(logDrop, clog.hasFullLog(), clog.isObtained(name));
 			boolean qualifies = DropQualifier.lootQualifies(price, config.winMinimumValue(), onTable, isTarget,
 				slot, newLogItem, keepsValue(name), listStatus(marketSource, table, name), popOff);
 			// A table/target item with no market value is a collection log chase we haven't seen yet: learn it.

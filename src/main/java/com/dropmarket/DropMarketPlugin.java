@@ -1114,6 +1114,13 @@ public class DropMarketPlugin extends Plugin
 
 	private void resolve()
 	{
+		// Loot events and chat messages for one drop can land on the same tick; make the noise once.
+		boolean alreadyCelebrating = resolved && resolvedTick == ticks;
+		WinSound sound = config.winSound();
+		if (!alreadyCelebrating && sound != WinSound.OFF)
+		{
+			client.playSoundEffect(sound.soundId());
+		}
 		resolvedDelta = (int) Math.round(100 - graph.current());
 		resolvedDelta2 = (int) Math.round(100 - polyGraph.current());
 		resolved = true;

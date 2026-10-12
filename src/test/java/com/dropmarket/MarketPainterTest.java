@@ -33,6 +33,13 @@ public class MarketPainterTest
 		Color bar2TextColor = Color.BLACK;
 		String bar1Text = "";
 		String bar2Text = "";
+		OverlayLayout layout = OverlayLayout.FULL;
+
+		@Override
+		public OverlayLayout overlayLayout()
+		{
+			return layout;
+		}
 
 		@Override
 		public Color line1Color()
@@ -217,5 +224,39 @@ public class MarketPainterTest
 		assertTrue(containsColor(flashing, MarketPainter.RAID_PURPLE));
 		assertFalse(containsColor(flashing, DropMarketConfig.DEFAULT_LINE2_COLOR));
 		assertFalse(containsColor(flashing, DropMarketConfig.DEFAULT_LINE_COLOR));
+	}
+
+	@Test
+	public void compactAndTickerLayoutsRenderTheOddsAndFlash() throws Exception
+	{
+		MarketGraph poly = new MarketGraph(new Random(99));
+		poly.reset();
+		for (OverlayLayout layout : new OverlayLayout[]{OverlayLayout.COMPACT, OverlayLayout.TICKER})
+		{
+			TestConfig config = new TestConfig();
+			config.layout = layout;
+			config.showSecondLine = true;
+			int h = MarketPainter.layoutHeight(config);
+			BufferedImage idle = render("Theatre of Blood drops Scythe of vitur", false, 0, 300, h, config, poly, 0);
+			BufferedImage flashing = render("Theatre of Blood drops Scythe of vitur", true, 0, 300, h, config, poly, 0);
+			assertTrue(layout + " idle shows line 1", containsColor(idle, DropMarketConfig.DEFAULT_LINE_COLOR));
+			assertTrue(layout + " idle shows line 2", containsColor(idle, DropMarketConfig.DEFAULT_LINE2_COLOR));
+			assertTrue(layout + " flashes purple", containsColor(flashing, MarketPainter.RAID_PURPLE));
+			assertFalse(layout + " flash covers line 2", containsColor(flashing, DropMarketConfig.DEFAULT_LINE2_COLOR));
+		}
+	}
+
+	@Test
+	public void layoutHeightsShrinkAndBarsAddToCompactOnly()
+	{
+		TestConfig config = new TestConfig();
+		assertTrue(MarketPainter.layoutHeight(config) < 0);
+		config.layout = OverlayLayout.COMPACT;
+		int plain = MarketPainter.layoutHeight(config);
+		config.showBar1 = true;
+		config.showBar2 = true;
+		assertTrue(MarketPainter.layoutHeight(config) > plain);
+		config.layout = OverlayLayout.TICKER;
+		assertTrue(MarketPainter.layoutHeight(config) < plain);
 	}
 }

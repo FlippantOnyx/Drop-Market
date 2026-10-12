@@ -1,0 +1,26 @@
+name: Update drop data
+on:
+  schedule:
+    - cron: "0 4 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Regenerate the bundled OSRS Wiki drop data
+        run: node tools/generate-wiki-drops.mjs
+      - name: Open a pull request with any changes
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          title: "chore: refresh bundled drop data"
+          commit-message: "chore: refresh bundled drop data"
+          branch: automated/update-drop-data
+          body: Regenerated from the OSRS Wiki by tools/generate-wiki-drops.mjs.

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.1
+
+- Fix: the overlay crashed the client when the plugin was installed (the config used package-private types RuneLite couldn't read)
+- Every event handler, the overlay, start/stop and the network callbacks now run behind a guard, so a bug in the plugin is logged once and skipped instead of reaching the client
+- Item, price and per-account settings access go through small wrappers that never throw
+- A test now runs the whole plugin through simulated sessions (normal, null-filled and throwing game state) and checks the structure rules
+
 ## 1.2.0
 
 - Abyssal Sire's market is the Unsired; at the Font of Consumption with an Unsired you get an "UNSIRED DROPS X" market valued by the rewards you can still get

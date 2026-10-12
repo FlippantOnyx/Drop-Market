@@ -32,6 +32,8 @@ group = 'com.dropmarket'
 tasks.withType(JavaCompile).configureEach {
 	options.encoding = 'UTF-8'
 	options.release.set(11)
+	// The hub rejects plugins that use API marked for removal; fail here first.
+	options.compilerArgs.addAll(['-Xlint:removal', '-Werror'])
 }
 
 tasks.register('run', JavaExec) {

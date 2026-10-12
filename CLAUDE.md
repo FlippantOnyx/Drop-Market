@@ -150,6 +150,29 @@ Don't be that. Rules for anything we run (tools, workflows, and any ad-hoc fetch
    `gh`. Check the PR's build once it has had time to run (the bot comments on non-commit changes; that is normal for
    a `repository=` change). Updates have typically merged in hours to a day or two.
 
+## Crash-proofing (a plugin bug must never reach the client)
+
+The 1.2.0 release shipped with a package-private enum in the public config; RuneLite's config proxy couldn't read it
+and the overlay threw an `IllegalAccessError` into the client every frame. The rules that came out of it:
+
+- **Every entry point goes through `Guard`**: each `@Subscribe` handler is a one-liner `guard.run("onX", () -> handleX(e))`,
+  the overlay renders through `guard.call`, `startUp`/`shutDown` are guarded piece by piece, and async callbacks
+  (wiki, RuneProfile, `clientThread.invoke`) catch their own failures. A failure is logged once per place and skipped.
+  New handlers must follow the same shape (`ArchitectureTest` checks it).
+- **Anything the config interface touches must be `public`**: the config itself, every enum it returns (`OverlayLayout`,
+  `WinSound`). Package-private is fine everywhere else.
+- **RuneLite services go through our wrappers**: `ItemLookup` (names, prices, search; never null, never throws) and
+  `ProfileStore` (per-account settings). Don't inject `ItemManager`/`ConfigManager` elsewhere; they can't be stubbed in
+  tests (private constructors), and the wrappers keep a failed lookup from killing a whole event.
+- **Assume the game hands you nulls** (NPC names, widget children, menu targets, empty events); check before chaining.
+- `PluginIntegrationTest` wires the real Guice graph the way RuneLite does (plugin instance bound, members injected) and
+  plays thousands of ticks of simulated kills, chat, loot and rendering against stand-in game objects: normal, null
+  state and throwing state. In the normal run `Guard.failures()` must stay empty. Add new event types there.
+- `ArchitectureTest` also bans threads, sleeps, `new Gson()`, mutable statics and direct `ItemManager`/`ConfigManager` use.
+  The build runs `-Xlint:removal -Werror`, so API scheduled for removal fails here before it fails the hub's build.
+- The overlay manager can't be stubbed either, so the integration test tolerates the two overlay register/unregister
+  failures and nothing else.
+
 ## Multi-part items and the Font of Consumption
 
 - Items that need several untradeable drops (Noxious halberd: blade, point, pommel; Abyssal bludgeon: axon, claw, spine)

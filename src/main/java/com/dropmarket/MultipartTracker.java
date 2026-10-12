@@ -5,7 +5,6 @@ import java.util.Collection;
 import java.util.List;
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import net.runelite.client.config.ConfigManager;
 
 /** Saves {@link OwnedParts} per RuneScape profile, the same way the collection log tracker keeps its data. */
 @Singleton
@@ -13,18 +12,18 @@ class MultipartTracker
 {
 	private static final String KEY = "multipartOwned";
 
-	private final ConfigManager configManager;
+	private final ProfileStore store;
 	private final OwnedParts parts = new OwnedParts();
 
 	@Inject
-	MultipartTracker(ConfigManager configManager)
+	MultipartTracker(ProfileStore store)
 	{
-		this.configManager = configManager;
+		this.store = store;
 	}
 
 	void load()
 	{
-		String value = configManager.getRSProfileConfiguration(DropMarketConfig.GROUP, KEY);
+		String value = store.get(KEY);
 		parts.replaceAll(value == null || value.isEmpty() ? List.<String>of() : Arrays.asList(value.split(",")));
 	}
 
@@ -45,7 +44,7 @@ class MultipartTracker
 		parts.add(part, setParts);
 		if (!already)
 		{
-			configManager.setRSProfileConfiguration(DropMarketConfig.GROUP, KEY, String.join(",", parts.snapshot()));
+			store.set(KEY, String.join(",", parts.snapshot()));
 		}
 		return !already;
 	}

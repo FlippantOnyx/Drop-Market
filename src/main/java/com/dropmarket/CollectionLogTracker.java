@@ -14,7 +14,6 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.client.callback.ClientThread;
-import net.runelite.client.config.ConfigManager;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.HttpUrl;
@@ -33,7 +32,7 @@ class CollectionLogTracker
 	private static final String KEY_FULL = "clogFull";
 	private static final HttpUrl RUNEPROFILE = HttpUrl.get("https://api.runeprofile.com/v1/accounts");
 
-	private final ConfigManager configManager;
+	private final ProfileStore store;
 	private final OkHttpClient http;
 	private final Gson gson;
 	private final ClientThread clientThread;
@@ -43,9 +42,9 @@ class CollectionLogTracker
 	private boolean fullLog;
 
 	@Inject
-	CollectionLogTracker(ConfigManager configManager, OkHttpClient http, Gson gson, ClientThread clientThread)
+	CollectionLogTracker(ProfileStore store, OkHttpClient http, Gson gson, ClientThread clientThread)
 	{
-		this.configManager = configManager;
+		this.store = store;
 		this.http = http;
 		this.gson = gson;
 		this.clientThread = clientThread;
@@ -58,12 +57,12 @@ class CollectionLogTracker
 		fullLog = false;
 		read(KEY_KNOWN, known);
 		read(KEY_OBTAINED, obtained);
-		fullLog = "true".equals(configManager.getRSProfileConfiguration(DropMarketConfig.GROUP, KEY_FULL));
+		fullLog = "true".equals(store.get(KEY_FULL));
 	}
 
 	private void read(String key, Set<String> into)
 	{
-		String value = configManager.getRSProfileConfiguration(DropMarketConfig.GROUP, key);
+		String value = store.get(key);
 		if (value != null && !value.isEmpty())
 		{
 			into.addAll(Arrays.asList(value.split(",")));
@@ -72,8 +71,8 @@ class CollectionLogTracker
 
 	private void save()
 	{
-		configManager.setRSProfileConfiguration(DropMarketConfig.GROUP, KEY_KNOWN, String.join(",", known));
-		configManager.setRSProfileConfiguration(DropMarketConfig.GROUP, KEY_OBTAINED, String.join(",", obtained));
+		store.set(KEY_KNOWN, String.join(",", known));
+		store.set(KEY_OBTAINED, String.join(",", obtained));
 	}
 
 	/** True once the whole log is known (from RuneProfile), so slot membership is authoritative. */
@@ -177,7 +176,7 @@ class CollectionLogTracker
 		}
 		slots.forEach(this::record);
 		fullLog = true;
-		configManager.setRSProfileConfiguration(DropMarketConfig.GROUP, KEY_FULL, "true");
+		store.set(KEY_FULL, "true");
 		save();
 	}
 

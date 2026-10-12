@@ -51,7 +51,6 @@ import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.events.NpcLootReceived;
 import net.runelite.client.events.RuneScapeProfileChanged;
-import net.runelite.client.game.ItemManager;
 import net.runelite.client.game.ItemStack;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
@@ -140,7 +139,7 @@ public class DropMarketPlugin extends Plugin
 	private DropMarketOverlay overlay;
 
 	@Inject
-	private ItemManager itemManager;
+	private ItemLookup itemLookup;
 
 	@Inject
 	private WikiDropTableClient wiki;
@@ -447,6 +446,10 @@ public class DropMarketPlugin extends Plugin
 	private void handleStatChanged(StatChanged event)
 	{
 		Skill skill = event.getSkill();
+		if (skill == null)
+		{
+			return;
+		}
 		Integer previous = lastXp.put(skill, event.getXp());
 		if (previous == null || event.getXp() <= previous)
 		{
@@ -536,6 +539,10 @@ public class DropMarketPlugin extends Plugin
 
 	private void handleItemContainerChanged(ItemContainerChanged event)
 	{
+		if (event.getItemContainer() == null)
+		{
+			return;
+		}
 		rememberParts(event);
 		if (event.getContainerId() != InventoryID.INV)
 		{
@@ -545,7 +552,7 @@ public class DropMarketPlugin extends Plugin
 		Set<Integer> ids = new HashSet<>();
 		for (Item item : event.getItemContainer().getItems())
 		{
-			if (item.getId() > 0 && DropTables.isTrailItem(itemManager.getItemComposition(item.getId()).getName()))
+			if (item.getId() > 0 && DropTables.isTrailItem(itemLookup.nameOf(item.getId())))
 			{
 				ids.add(item.getId());
 			}
@@ -571,7 +578,7 @@ public class DropMarketPlugin extends Plugin
 			return;
 		}
 		String option = event.getMenuOption();
-		String target = Text.removeTags(event.getMenuTarget()).toLowerCase();
+		String target = event.getMenuTarget() == null ? "" : Text.removeTags(event.getMenuTarget()).toLowerCase();
 		boolean readsClue = "Read".equals(option) && (target.contains("clue scroll") || target.contains("challenge scroll"));
 		boolean opensCasket = "Open".equals(option) && target.contains("casket");
 		if (readsClue || opensCasket || "Dig".equals(option))
@@ -588,7 +595,12 @@ public class DropMarketPlugin extends Plugin
 			return;
 		}
 		StringBuilder page = new StringBuilder();
-		for (Widget w : items.getDynamicChildren())
+		Widget[] slots = items.getDynamicChildren();
+		if (slots == null)
+		{
+			return;
+		}
+		for (Widget w : slots)
 		{
 			page.append(w.getItemId()).append(':').append(w.getOpacity()).append(',');
 		}
@@ -600,12 +612,16 @@ public class DropMarketPlugin extends Plugin
 		lastClogPage = signature;
 
 		boolean changed = false;
-		for (Widget w : items.getDynamicChildren())
+		for (Widget w : slots)
 		{
 			if (w.getItemId() > 0)
 			{
 				// Unlocked slots draw fully opaque; locked ones are faded.
-				changed |= clog.record(itemManager.getItemComposition(w.getItemId()).getName(), w.getOpacity() == 0);
+				String slot = itemLookup.nameOf(w.getItemId());
+				if (!slot.isEmpty())
+				{
+					changed |= clog.record(slot, w.getOpacity() == 0);
+				}
 			}
 		}
 		if (changed)
@@ -657,7 +673,7 @@ public class DropMarketPlugin extends Plugin
 
 	private void handleHitsplatApplied(HitsplatApplied event)
 	{
-		if (event.getHitsplat().isMine() && event.getActor() instanceof NPC)
+		if (event.getHitsplat() != null && event.getHitsplat().isMine() && event.getActor() instanceof NPC)
 		{
 			markCombat((NPC) event.getActor());
 		}
@@ -710,6 +726,10 @@ public class DropMarketPlugin extends Plugin
 
 	private void handleChatMessage(ChatMessage event)
 	{
+		if (event.getType() == null)
+		{
+			return;
+		}
 		switch (event.getType())
 		{
 			case GAMEMESSAGE:
@@ -721,6 +741,10 @@ public class DropMarketPlugin extends Plugin
 				return;
 		}
 
+		if (event.getMessage() == null)
+		{
+			return;
+		}
 		String raw = Text.removeTags(event.getMessage());
 		if (event.getType() == ChatMessageType.GAMEMESSAGE)
 		{
@@ -896,7 +920,7 @@ public class DropMarketPlugin extends Plugin
 	private void handleGameObjectSpawned(GameObjectSpawned event)
 	{
 		GameObject object = event.getGameObject();
-		if (object.getId() == FONT_OBJECT_ID)
+		if (object != null && object.getId() == FONT_OBJECT_ID)
 		{
 			fontPoint = object.getWorldLocation();
 		}
@@ -911,7 +935,7 @@ public class DropMarketPlugin extends Plugin
 	private void handleGameObjectDespawned(GameObjectDespawned event)
 	{
 		GameObject object = event.getGameObject();
-		if (object.getId() == FONT_OBJECT_ID && object.getWorldLocation().equals(fontPoint))
+		if (object != null && object.getId() == FONT_OBJECT_ID && fontPoint != null && fontPoint.equals(object.getWorldLocation()))
 		{
 			fontPoint = null;
 		}
@@ -925,7 +949,7 @@ public class DropMarketPlugin extends Plugin
 			return false;
 		}
 		WorldPoint here = player.getWorldLocation();
-		return here.getPlane() == fontPoint.getPlane() && here.distanceTo(fontPoint) <= FONT_RANGE;
+		return here != null && here.getPlane() == fontPoint.getPlane() && here.distanceTo(fontPoint) <= FONT_RANGE;
 	}
 
 	/** Standing at the Font of Consumption with an Unsired in the inventory, about to offer it. */
@@ -958,7 +982,7 @@ public class DropMarketPlugin extends Plugin
 			{
 				continue;
 			}
-			String name = itemManager.getItemComposition(item.getId()).getName();
+			String name = itemLookup.nameOf(item.getId());
 			if (!valuableComponents.partsOf(name).isEmpty())
 			{
 				held.add(DropTables.normalize(name));
@@ -1246,7 +1270,7 @@ public class DropMarketPlugin extends Plugin
 
 	private boolean pricesLoaded()
 	{
-		return !itemManager.search("Coins").isEmpty();
+		return !itemLookup.search("Coins").isEmpty();
 	}
 
 	/** GE price, {@link DropQualifier#NO_PRICE} if it has none, or {@link DropQualifier#PRICES_NOT_LOADED}. */
@@ -1286,12 +1310,12 @@ public class DropMarketPlugin extends Plugin
 			return DropQualifier.PRICES_NOT_LOADED;
 		}
 		long price = DropQualifier.NO_PRICE;
-		for (ItemPrice ip : itemManager.search(name))
+		for (ItemPrice ip : itemLookup.search(name))
 		{
-			if (ip.getName().equalsIgnoreCase(name))
+			if (name.equalsIgnoreCase(ip.getName()))
 			{
 				// Found in the GE search, so it is tradeable: a price of 0 just means the GE has no price for it yet.
-				price = itemManager.getItemPrice(ip.getId());
+				price = itemLookup.priceOf(ip.getId());
 				if (price <= 0)
 				{
 					price = DropQualifier.NOT_PRICED_YET;
@@ -1315,6 +1339,10 @@ public class DropMarketPlugin extends Plugin
 
 	private void checkLoot(Collection<ItemStack> items)
 	{
+		if (items == null || items.isEmpty())
+		{
+			return;
+		}
 		boolean clogChanged = false;
 		boolean popOff = config.popOffOnEveryDrop();
 		String hitItem = null;
@@ -1323,7 +1351,11 @@ public class DropMarketPlugin extends Plugin
 		List<String> table = knownTable(marketSource);
 		for (ItemStack stack : items)
 		{
-			String name = itemManager.getItemComposition(itemManager.canonicalize(stack.getId())).getName();
+			String name = itemLookup.canonicalNameOf(stack.getId());
+			if (name.isEmpty())
+			{
+				continue;
+			}
 			long price = priceOf(name);
 			boolean isTarget = marketItem != null && matchesMarketItem(name);
 			// Any item from the monster/event's own notable table is worth celebrating - even one

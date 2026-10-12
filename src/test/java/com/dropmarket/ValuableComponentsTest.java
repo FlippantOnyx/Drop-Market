@@ -17,17 +17,23 @@ public class ValuableComponentsTest
 		assertTrue(components.contains("  NOXIOUS BLADE "));
 		assertTrue(components.contains("Bludgeon claw"));
 		assertTrue(components.contains("Eye of the Duke"));
+		// The vestiges are untradeable drops that go into the icons, which go into the rings.
+		assertTrue(components.contains("Magus vestige"));
+		assertTrue(components.contains("Ultor vestige"));
+		assertTrue(components.contains("Bellator vestige"));
+		assertTrue(components.contains("Venator vestige"));
 	}
 
 	@Test
 	public void thingsYouMakeButNeverGetAsADropAreNot()
 	{
-		// Icons are made from vestiges, the infernal chunk from oathplate shards, the blade from the seed.
+		// Icons and the infernal chunk are crafted, and the crystal weapon line is left alone on purpose.
 		assertFalse(components.contains("Magus icon"));
 		assertFalse(components.contains("Ultor icon"));
 		assertFalse(components.contains("Infernal chunk"));
 		assertFalse(components.contains("Guthixian icon"));
 		assertFalse(components.contains("Blade of Saeldor (c)"));
+		assertFalse(components.contains("Crystal shard"));
 	}
 
 	@Test

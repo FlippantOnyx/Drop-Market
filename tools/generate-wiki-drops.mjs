@@ -95,18 +95,32 @@ for (let offset = 0; ; offset += PAGE) {
 // Only items that actually drop from something count: parts you make (icons, the inactive Saeldor blade...) never drop
 // themselves, and their drop-side ingredients (vestiges, oathplate shards...) are tradeable and priced normally.
 const dropped = new Set(rows.map((row) => row.item_name));
-const components = new Set();
+// Follow recipes backwards through untradeable steps: an expensive tradeable item (a ring worth 5m+) needs an
+// untradeable icon, which needs an untradeable vestige that actually drops. Every untradeable ingredient on such a
+// chain counts as "valuable"; the ones that drop from something are what we keep.
+const parsed = [];
 for (const row of recipes) {
 	let recipe;
 	try { recipe = JSON.parse(row.production_json); } catch { continue; }
 	const output = recipe.output?.name;
-	if (!output || !Array.isArray(recipe.materials) || (worth.get(output) ?? 0) < MIN_COMPONENT_OUTPUT_VALUE) continue;
-	for (const material of recipe.materials) {
-		if (material.name && material.name !== 'Coins' && dropped.has(material.name) && !tradeable.has(material.name)) {
-			components.add(material.name);
+	if (output && Array.isArray(recipe.materials)) parsed.push({ output, materials: recipe.materials.map((m) => m.name).filter(Boolean) });
+}
+// The crystal weapon line (enhanced seed, Blade of Saeldor, Bow of Faerdhinen) is deliberately left out.
+const IGNORED = /saeldor|faerdhinen|crystal weapon seed/i;
+const valuable = new Set([...worth].filter(([name, value]) => value >= MIN_COMPONENT_OUTPUT_VALUE && !IGNORED.test(name)).map(([name]) => name));
+for (let changed = true; changed;) {
+	changed = false;
+	for (const { output, materials } of parsed) {
+		if (!valuable.has(output)) continue;
+		for (const material of materials) {
+			if (material !== 'Coins' && !tradeable.has(material) && !valuable.has(material) && !IGNORED.test(material)) {
+				valuable.add(material);
+				changed = true;
+			}
 		}
 	}
 }
+const components = new Set([...valuable].filter((name) => !tradeable.has(name) && dropped.has(name) && name !== 'Coins'));
 
 writeFileSync(new URL('wiki-drops.json', OUT_DIR), JSON.stringify(drops));
 writeFileSync(new URL('collection-log.json', OUT_DIR), JSON.stringify({ items: clogItems, sources }));

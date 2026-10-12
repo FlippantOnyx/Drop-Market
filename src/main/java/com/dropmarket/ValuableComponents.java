@@ -14,7 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * Untradeable items that DROP and are used to make expensive tradeable ones (Araxyte fang, Mokhaiotl cloth...), from the
- * bundled snapshot made by tools/generate-wiki-drops.mjs. Parts you only craft (icons, the infernal chunk) aren't here. They have no GE price, but they are still worth celebrating.
+ * bundled snapshot made by tools/generate-wiki-drops.mjs. Parts you only craft (icons, the infernal chunk) aren't here, but the untradeable drops that feed them (the vestiges) are. They have no GE price, but they are still worth celebrating.
  */
 @Slf4j
 @Singleton

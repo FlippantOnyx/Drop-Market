@@ -125,7 +125,7 @@ Don't be that. Rules for anything we run (tools, workflows, and any ad-hoc fetch
 - `generate-wiki-drops.mjs` — regenerates `src/main/resources/com/dropmarket/wiki-drops.json` (monster → top drops) and
   `collection-log.json` (log items and which monsters drop them). ~10 API calls, ~1s apart. Run before each release;
   the `update-drop-data` workflow does it monthly and opens a PR.
-- Also builds `valuable-components.json` (untradeable items that drop and are used in recipes whose output is worth 5m+) using the wiki's real-time prices API (`prices.runescape.wiki`), with the same polite User-Agent.
+- Also builds `valuable-components.json` (untradeable items that drop and end up, through any number of crafting steps, in an item worth 5m+) using the wiki's real-time prices API (`prices.runescape.wiki`), with the same polite User-Agent.
 - `check-game-updates.mjs [days]` — lists new `Update:` pages from the wiki's recent changes. The
   `watch-game-updates` workflow runs it weekly and opens/updates a "Game update watch" issue.
 

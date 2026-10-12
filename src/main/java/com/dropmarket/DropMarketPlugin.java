@@ -996,7 +996,7 @@ public class DropMarketPlugin extends Plugin
 		return !fromWiki && !clog.hasFullLog();
 	}
 
-	/** An untradeable that is still worth celebrating: a pet, or a drop that is a part of an expensive item (fangs, cloth...). */
+	/** An untradeable that is still worth celebrating: a pet, or a drop that is a part of an expensive item (vestiges, fangs, cloth...). */
 	private boolean keepsValue(String item)
 	{
 		return DropTables.isPet(item) || valuableComponents.contains(item);

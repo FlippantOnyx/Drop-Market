@@ -161,6 +161,9 @@ a finished kill/action and carries over between activities.
 
 ## Working style for this project
 
+- **Write like a person on PR comments, PR descriptions and commit messages.** Short and plain: a one-line commit subject
+  (with a sentence or two of body only when the why isn't obvious), one to three sentences on a PR comment, no
+  bullet-list summaries, bold labels, headings or formal filler. Maintainers read these.
 - Keep it light and fun; don't over-engineer. Small, tested changes; show visual changes with a rendered preview.
 - Commit locally as you go; push and open hub PRs only when the user asks. Announce what you did plainly, including
   anything you couldn't verify in-game.

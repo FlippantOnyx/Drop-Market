@@ -149,8 +149,15 @@ class CollectionLogTracker
 					JsonObject clog = gson.fromJson(body.string(), JsonObject.class);
 					clientThread.invoke(() ->
 					{
-						applyRuneProfile(clog);
-						onClientThread.run();
+						try
+						{
+							applyRuneProfile(clog);
+							onClientThread.run();
+						}
+						catch (Exception | LinkageError e)
+						{
+							log.debug("RuneProfile result failed", e);
+						}
 					});
 				}
 				catch (Exception e)

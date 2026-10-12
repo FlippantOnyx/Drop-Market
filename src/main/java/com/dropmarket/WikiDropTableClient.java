@@ -146,7 +146,17 @@ class WikiDropTableClient
 			cache.put(key, new CachedDrops(drops, expiresAt));
 		}
 		inFlight.remove(key);
-		clientThread.invoke(() -> onClientThread.accept(drops));
+		clientThread.invoke(() ->
+		{
+			try
+			{
+				onClientThread.accept(drops);
+			}
+			catch (Exception | LinkageError e)
+			{
+				log.debug("Wiki drop result failed", e);
+			}
+		});
 	}
 
 	List<String> parse(String json)

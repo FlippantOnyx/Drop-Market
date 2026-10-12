@@ -128,6 +128,9 @@ public class DropMarketPlugin extends Plugin
 	private ClientThread clientThread;
 
 	@Inject
+	private Guard guard;
+
+	@Inject
 	private DropMarketConfig config;
 
 	@Inject
@@ -230,6 +233,20 @@ public class DropMarketPlugin extends Plugin
 	@Override
 	protected void startUp()
 	{
+		guard.run("startUp", this::resetState);
+		// The overlay goes up even if resetting hit a problem, so the plugin never half-starts.
+		guard.run("startUp overlay", () -> overlayManager.add(overlay));
+		guard.run("startUp collection log", () ->
+		{
+			if (client.getGameState() == GameState.LOGGED_IN)
+			{
+				clientThread.invoke(() -> guard.run("collection log load", clog::load));
+			}
+		});
+	}
+
+	private void resetState()
+	{
 		priorities = DropTables.parsePriorities(config.priorityDrops());
 		blacklist = DropTables.parsePriorities(config.blacklistedDrops());
 		ticks = 0;
@@ -270,17 +287,12 @@ public class DropMarketPlugin extends Plugin
 		graph.reset();
 		polyGraph.reset();
 		updateTitle();
-		overlayManager.add(overlay);
-		if (client.getGameState() == GameState.LOGGED_IN)
-		{
-			clientThread.invoke(clog::load);
-		}
 	}
 
 	@Override
 	protected void shutDown()
 	{
-		overlayManager.remove(overlay);
+		guard.run("shutDown overlay", () -> overlayManager.remove(overlay));
 		resolved = false;
 		showingMarket = false;
 		marketSource = null;
@@ -290,6 +302,11 @@ public class DropMarketPlugin extends Plugin
 
 	@Subscribe
 	public void onGameTick(GameTick tick)
+	{
+		guard.run("onGameTick", () -> handleGameTick(tick));
+	}
+
+	private void handleGameTick(GameTick tick)
 	{
 		ticks++;
 		trackInteracting();
@@ -424,6 +441,11 @@ public class DropMarketPlugin extends Plugin
 	@Subscribe
 	public void onStatChanged(StatChanged event)
 	{
+		guard.run("onStatChanged", () -> handleStatChanged(event));
+	}
+
+	private void handleStatChanged(StatChanged event)
+	{
 		Skill skill = event.getSkill();
 		Integer previous = lastXp.put(skill, event.getXp());
 		if (previous == null || event.getXp() <= previous)
@@ -471,6 +493,11 @@ public class DropMarketPlugin extends Plugin
 	@Subscribe
 	public void onGameStateChanged(GameStateChanged event)
 	{
+		guard.run("onGameStateChanged", () -> handleGameStateChanged(event));
+	}
+
+	private void handleGameStateChanged(GameStateChanged event)
+	{
 		if (event.getGameState() == GameState.LOADING)
 		{
 			// Scenery respawns after a load, so the font is rediscovered.
@@ -490,6 +517,11 @@ public class DropMarketPlugin extends Plugin
 	@Subscribe
 	public void onRuneScapeProfileChanged(RuneScapeProfileChanged event)
 	{
+		guard.run("onRuneScapeProfileChanged", () -> handleRuneScapeProfileChanged(event));
+	}
+
+	private void handleRuneScapeProfileChanged(RuneScapeProfileChanged event)
+	{
 		clog.load();
 		multipart.load();
 		runeProfileFetchedFor = null;
@@ -498,6 +530,11 @@ public class DropMarketPlugin extends Plugin
 
 	@Subscribe
 	public void onItemContainerChanged(ItemContainerChanged event)
+	{
+		guard.run("onItemContainerChanged", () -> handleItemContainerChanged(event));
+	}
+
+	private void handleItemContainerChanged(ItemContainerChanged event)
 	{
 		rememberParts(event);
 		if (event.getContainerId() != InventoryID.INV)
@@ -523,6 +560,11 @@ public class DropMarketPlugin extends Plugin
 
 	@Subscribe
 	public void onMenuOptionClicked(MenuOptionClicked event)
+	{
+		guard.run("onMenuOptionClicked", () -> handleMenuOptionClicked(event));
+	}
+
+	private void handleMenuOptionClicked(MenuOptionClicked event)
 	{
 		if (trailItemIds.isEmpty())
 		{
@@ -595,7 +637,7 @@ public class DropMarketPlugin extends Plugin
 			return;
 		}
 		runeProfileFetchedFor = name;
-		clog.fetchRuneProfile(name, this::repickMarket);
+		clog.fetchRuneProfile(name, () -> guard.run("RuneProfile result", this::repickMarket));
 	}
 
 	private void repickMarket()
@@ -610,6 +652,11 @@ public class DropMarketPlugin extends Plugin
 	@Subscribe
 	public void onHitsplatApplied(HitsplatApplied event)
 	{
+		guard.run("onHitsplatApplied", () -> handleHitsplatApplied(event));
+	}
+
+	private void handleHitsplatApplied(HitsplatApplied event)
+	{
 		if (event.getHitsplat().isMine() && event.getActor() instanceof NPC)
 		{
 			markCombat((NPC) event.getActor());
@@ -619,11 +666,21 @@ public class DropMarketPlugin extends Plugin
 	@Subscribe
 	public void onNpcLootReceived(NpcLootReceived event)
 	{
+		guard.run("onNpcLootReceived", () -> handleNpcLootReceived(event));
+	}
+
+	private void handleNpcLootReceived(NpcLootReceived event)
+	{
 		checkLoot(event.getItems());
 	}
 
 	@Subscribe
 	public void onLootReceived(LootReceived event)
+	{
+		guard.run("onLootReceived", () -> handleLootReceived(event));
+	}
+
+	private void handleLootReceived(LootReceived event)
 	{
 		checkLoot(event.getItems());
 		if (event.getName() != null)
@@ -647,6 +704,11 @@ public class DropMarketPlugin extends Plugin
 
 	@Subscribe
 	public void onChatMessage(ChatMessage event)
+	{
+		guard.run("onChatMessage", () -> handleChatMessage(event));
+	}
+
+	private void handleChatMessage(ChatMessage event)
 	{
 		switch (event.getType())
 		{
@@ -741,6 +803,11 @@ public class DropMarketPlugin extends Plugin
 	@Subscribe
 	public void onConfigChanged(ConfigChanged event)
 	{
+		guard.run("onConfigChanged", () -> handleConfigChanged(event));
+	}
+
+	private void handleConfigChanged(ConfigChanged event)
+	{
 		if (!DropMarketConfig.GROUP.equals(event.getGroup()))
 		{
 			return;
@@ -823,6 +890,11 @@ public class DropMarketPlugin extends Plugin
 	@Subscribe
 	public void onGameObjectSpawned(GameObjectSpawned event)
 	{
+		guard.run("onGameObjectSpawned", () -> handleGameObjectSpawned(event));
+	}
+
+	private void handleGameObjectSpawned(GameObjectSpawned event)
+	{
 		GameObject object = event.getGameObject();
 		if (object.getId() == FONT_OBJECT_ID)
 		{
@@ -832,6 +904,11 @@ public class DropMarketPlugin extends Plugin
 
 	@Subscribe
 	public void onGameObjectDespawned(GameObjectDespawned event)
+	{
+		guard.run("onGameObjectDespawned", () -> handleGameObjectDespawned(event));
+	}
+
+	private void handleGameObjectDespawned(GameObjectDespawned event)
 	{
 		GameObject object = event.getGameObject();
 		if (object.getId() == FONT_OBJECT_ID && object.getWorldLocation().equals(fontPoint))
@@ -1031,14 +1108,14 @@ public class DropMarketPlugin extends Plugin
 		boolean fromWiki = DropTables.lookup(source) == null;
 		if (table == null && config.wikiLookup())
 		{
-			wiki.fetch(source, drops ->
+			wiki.fetch(source, drops -> guard.run("wiki lookup result", () ->
 			{
 				if (source.equals(marketSource) && marketItem == null && !resolved)
 				{
 					marketItem = pickItem(source, drops, true);
 					updateTitle();
 				}
-			});
+			}));
 		}
 		if (!pricesLoaded())
 		{

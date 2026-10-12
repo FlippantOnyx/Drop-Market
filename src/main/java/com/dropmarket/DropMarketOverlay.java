@@ -18,14 +18,16 @@ class DropMarketOverlay extends Overlay
 	private final Client client;
 	private final DropMarketPlugin plugin;
 	private final DropMarketConfig config;
+	private final Guard guard;
 
 	@Inject
-	DropMarketOverlay(Client client, DropMarketPlugin plugin, DropMarketConfig config)
+	DropMarketOverlay(Client client, DropMarketPlugin plugin, DropMarketConfig config, Guard guard)
 	{
 		super(plugin);
 		this.client = client;
 		this.plugin = plugin;
 		this.config = config;
+		this.guard = guard;
 		setPosition(OverlayPosition.TOP_LEFT);
 		setPriority(PRIORITY_LOW);
 		setResizable(true);
@@ -34,6 +36,12 @@ class DropMarketOverlay extends Overlay
 
 	@Override
 	public Dimension render(Graphics2D graphics)
+	{
+		// A problem while drawing just skips the frame; it never reaches the client.
+		return guard.call("overlay", () -> draw(graphics), null);
+	}
+
+	private Dimension draw(Graphics2D graphics)
 	{
 		if (client.getGameState() != GameState.LOGGED_IN)
 		{

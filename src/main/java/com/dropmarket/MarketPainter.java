@@ -158,7 +158,7 @@ final class MarketPainter
 			int chartBottom = h - PAD - footerH - smallFm.getAscent() / 2;
 			if (chartBottom - chartTop >= 10 && chartRight - chartLeft >= 20)
 			{
-				drawChart(g, graph, secondLine, accent, config.line2Color(), chartLeft, chartTop, chartRight,
+				drawChart(g, graph, secondLine, accent, accent2, chartLeft, chartTop, chartRight,
 					chartBottom, smallFm, nowTick);
 			}
 

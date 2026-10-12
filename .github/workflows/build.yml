@@ -1,5 +1,8 @@
 name: Build
 on:
+  schedule:
+    # Weekly, so a RuneLite API change (the build uses the latest release) shows up before the hub notices.
+    - cron: "0 6 * * 3"
   push:
     branches:
       - main

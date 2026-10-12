@@ -4,14 +4,11 @@
 //                         price-checks the common ones itself)
 // Run with: node tools/generate-wiki-drops.mjs   (needs Node 18+ for fetch; run before each release)
 import { writeFileSync } from 'node:fs';
+import { PAUSE_MS, sleep, wikiApi } from './wiki-api.mjs';
 
-const API = 'https://oldschool.runescape.wiki/api.php';
 const OUT_DIR = new URL('../src/main/resources/com/dropmarket/', import.meta.url);
-const CLOG_URL = 'https://oldschool.runescape.wiki/w/Module:Collection_log/data.json?action=raw';
 const PAGE = 5000;
 const KEEP_PER_MONSTER = 15;
-const USER_AGENT = 'PredictionMarketDrops-snapshot (RuneLite plugin; https://github.com/TaikiShuttleRS/Drop-Market)';
-
 // Must match DropTables.normalize in the plugin.
 const normalize = (s) => s.replace(/ /g, ' ').toLowerCase().replace(/\(.*?\)/g, ' ')
 	.replace(/[-_]/g, ' ').replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
@@ -19,19 +16,18 @@ const normalize = (s) => s.replace(/ /g, ' ').toLowerCase().replace(/\(.*?\)/g,
 const rows = [];
 for (let offset = 0; ; offset += PAGE) {
 	const query = `bucket('dropsline').select('page_name','item_name','drop_json').limit(${PAGE}).offset(${offset}).run()`;
-	const url = `${API}?action=bucket&format=json&query=${encodeURIComponent(query)}`;
-	const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
-	if (!res.ok) throw new Error(`Wiki returned ${res.status} at offset ${offset}`);
-	const batch = (await res.json()).bucket ?? [];
+	const batch = (await wikiApi({ action: 'bucket', query })).bucket ?? [];
 	rows.push(...batch);
 	console.log(`fetched ${rows.length} rows`);
 	if (batch.length < PAGE) break;
-	await new Promise((r) => setTimeout(r, 1000));
+	await sleep(PAUSE_MS);
 }
 
-const clogRes = await fetch(CLOG_URL, { headers: { 'User-Agent': USER_AGENT } });
-if (!clogRes.ok) throw new Error(`Wiki returned ${clogRes.status} for the collection log data`);
-const clogItems = [...new Set((await clogRes.json()).map((entry) => entry.name))].sort();
+await sleep(PAUSE_MS);
+// The collection log item list lives in a wiki data module; read it through the API, not by fetching the page.
+const clogPage = (await wikiApi({ action: 'query', prop: 'revisions', rvprop: 'content', rvslots: 'main',
+	titles: 'Module:Collection log/data.json', formatversion: '2' })).query.pages[0];
+const clogItems = [...new Set(JSON.parse(clogPage.revisions[0].slots.main.content).map((entry) => entry.name))].sort();
 const clogKeys = new Set(clogItems.map(normalize));
 
 // monster -> item -> best drop value (for the market), skipping guaranteed drops.

@@ -1,0 +1,32 @@
+name: Watch game updates
+on:
+  schedule:
+    - cron: "0 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: List new OSRS update pages (one polite API call)
+        run: node tools/check-game-updates.mjs 10 > updates.md
+      - name: Open or update the watch issue if there is news
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -s updates.md ]; then
+            existing=$(gh issue list --state open --search "Game update watch in:title" --json number --jq '.[0].number')
+            if [ -n "$existing" ]; then
+              gh issue comment "$existing" --body-file updates.md
+            else
+              gh issue create --title "Game update watch" --body-file updates.md
+            fi
+          fi

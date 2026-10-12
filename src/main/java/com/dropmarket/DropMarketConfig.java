@@ -293,15 +293,16 @@ public interface DropMarketConfig extends Config
 	}
 
 	@ConfigItem(
-		keyName = "secondNumberPlacement",
-		name = "Second Number Position",
-		description = "Where line 2's big number goes: after line 1's change, right beside line 1's number, or on the right side of the box (Full only)",
+		keyName = "pinSecondNumberRight",
+		name = "Pin Second Number to Right Edge",
+		description = "With the second odds number on: put it and its change at the right edge of the box (Full layout).<br>"
+			+ "Off: it follows line 1's change instead. Without the second number, line 2's change always sits after line 1's.",
 		section = SECTION_LINES,
 		position = 5
 	)
-	default SecondNumberPlacement secondNumberPlacement()
+	default boolean pinSecondNumberRight()
 	{
-		return SecondNumberPlacement.RIGHT_SIDE;
+		return true;
 	}
 
 	@ConfigItem(

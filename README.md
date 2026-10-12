@@ -2,7 +2,9 @@
 
 A tiny, purely-for-fun overlay that turns your next big drop into a prediction-market-style odds graph. **The odds are completely made up** — this isn't tied to any real drop rates, trading, or gambling, it's just flavor for flexing on your clanmates while you grind.
 
-![A market betting on a Zulrah drop](docs/screenshot-market.png) ![A win, flashing raid purple](docs/screenshot-win.png)
+![The three layouts (Full, Compact, Ticker) with different settings, including a win flash](docs/overlay-layouts.png)
+
+_Rows: Full, Compact and Ticker. Columns: one line, a second line with its number, a second line with header bars, and a win._
 
 ## How it works
 

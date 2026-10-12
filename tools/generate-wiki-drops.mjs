@@ -2,7 +2,7 @@
 //   wiki-drops.json       monster -> its best drops by value (what the market bets on)
 //   collection-log.json   every collection log item, and per monster the log items it drops (any rate: the plugin
 //                         price-checks the common ones itself)
-//   valuable-components.json   untradeable items used to make items worth 5m+ (celebrated despite having no GE price)
+//   valuable-components.json   untradeable DROPS used to make items worth 5m+ (celebrated despite having no GE price)
 // Run with: node tools/generate-wiki-drops.mjs   (needs Node 18+ for fetch; run before each release)
 import { writeFileSync } from 'node:fs';
 import { PAUSE_MS, USER_AGENT, sleep, wikiApi } from './wiki-api.mjs';
@@ -92,6 +92,9 @@ for (let offset = 0; ; offset += PAGE) {
 	recipes.push(...batch);
 	if (batch.length < PAGE) break;
 }
+// Only items that actually drop from something count: parts you make (icons, the inactive Saeldor blade...) never drop
+// themselves, and their drop-side ingredients (vestiges, oathplate shards...) are tradeable and priced normally.
+const dropped = new Set(rows.map((row) => row.item_name));
 const components = new Set();
 for (const row of recipes) {
 	let recipe;
@@ -99,7 +102,9 @@ for (const row of recipes) {
 	const output = recipe.output?.name;
 	if (!output || !Array.isArray(recipe.materials) || (worth.get(output) ?? 0) < MIN_COMPONENT_OUTPUT_VALUE) continue;
 	for (const material of recipe.materials) {
-		if (material.name && material.name !== 'Coins' && !tradeable.has(material.name)) components.add(material.name);
+		if (material.name && material.name !== 'Coins' && dropped.has(material.name) && !tradeable.has(material.name)) {
+			components.add(material.name);
+		}
 	}
 }
 

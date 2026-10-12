@@ -301,7 +301,7 @@ public interface DropMarketConfig extends Config
 	)
 	default SecondNumberPlacement secondNumberPlacement()
 	{
-		return SecondNumberPlacement.AFTER_CHANGE;
+		return SecondNumberPlacement.RIGHT_SIDE;
 	}
 
 	@ConfigItem(

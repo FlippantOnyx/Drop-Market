@@ -295,7 +295,7 @@ public interface DropMarketConfig extends Config
 	@ConfigItem(
 		keyName = "secondNumberPlacement",
 		name = "Second Number Position",
-		description = "Where line 2's big number goes: after line 1's change, or right beside line 1's number",
+		description = "Where line 2's big number goes: after line 1's change, right beside line 1's number, or on the right side of the box (Full only)",
 		section = SECTION_LINES,
 		position = 5
 	)

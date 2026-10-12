@@ -4,7 +4,8 @@ package com.dropmarket;
 enum SecondNumberPlacement
 {
 	AFTER_CHANGE("After line 1's change"),
-	BESIDE_FIRST("Right of line 1's number");
+	BESIDE_FIRST("Right of line 1's number"),
+	RIGHT_SIDE("Right side of the box");
 
 	private final String label;
 

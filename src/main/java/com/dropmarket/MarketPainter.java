@@ -44,6 +44,8 @@ final class MarketPainter
 	private static final int CHANGE_GAP = 12;
 	private static final int NUMBER_GAP = 20;
 	private static final int PAIR_GAP = 10;
+	private static final int TIGHT_GAP = 8;
+	private static final int RIGHT_SIDE_MIN_GAP = 12;
 	private static final int SCROLL_GAP = 28;
 	private static final int SCROLL_PX_PER_TICK = 8;
 
@@ -163,7 +165,7 @@ final class MarketPainter
 			int pct = (int) Math.round(graph.current());
 			String pctText = pct + "%";
 			String pct2 = secondLine == null ? null : Math.round(secondLine.current()) + "%";
-			drawOdds(g, PAD, y, w - PAD, bigFont, smallFont, accent, accent2, pctText, pct2, delta1, delta2, config);
+			drawOdds(g, PAD, y, w - PAD, true, bigFont, smallFont, accent, accent2, pctText, pct2, delta1, delta2, config);
 			y += bigFm.getDescent();
 			g.setFont(smallFont);
 
@@ -255,7 +257,7 @@ final class MarketPainter
 		String pctText = Math.round(graph.current()) + "%";
 		g.setFont(bigFont);
 		String pct2 = secondLine == null ? null : Math.round(secondLine.current()) + "%";
-		int dx = drawOdds(g, PAD, pctBaseline, w - PAD - 24, bigFont, smallFont, accent, accent2, pctText, pct2, delta1,
+		int dx = drawOdds(g, PAD, pctBaseline, w - PAD - 24, false, bigFont, smallFont, accent, accent2, pctText, pct2, delta1,
 			delta2, config);
 
 		int sparkLeft = dx + 12;
@@ -412,23 +414,42 @@ final class MarketPainter
 
 	/**
 	 * Draws line 1's big number and change, plus line 2's change (and, if enabled and it fits, line 2's big number)
-	 * starting at startX, and returns where it ended. The second number gets generous spacing either way.
+	 * starting at startX, and returns where it ended. In the Full layout the second number gets a bit of room when it
+	 * follows line 1's change; beside line 1's number, in Compact, and on the right side it is kept tight.
 	 */
-	private static int drawOdds(Graphics2D g, int startX, int baseline, int limit, Font bigFont, Font smallFont,
-		Color accent, Color accent2, String pct1, String pct2, int delta1, int delta2, DropMarketConfig config)
+	private static int drawOdds(Graphics2D g, int startX, int baseline, int limit, boolean full, Font bigFont,
+		Font smallFont, Color accent, Color accent2, String pct1, String pct2, int delta1, int delta2,
+		DropMarketConfig config)
 	{
 		FontMetrics bigFm = g.getFontMetrics(bigFont);
 		int pct1W = bigFm.stringWidth(pct1);
 		int d1W = deltaWidth(g, delta1, smallFont);
 		int d2W = pct2 == null ? 0 : deltaWidth(g, delta2, smallFont);
 		int pct2W = pct2 == null ? 0 : bigFm.stringWidth(pct2);
-		boolean beside = config.secondNumberPlacement() == SecondNumberPlacement.BESIDE_FIRST;
+		SecondNumberPlacement placement = config.secondNumberPlacement();
 		boolean number = pct2 != null && config.showSecondNumber();
+		// The right side needs the whole box; Compact keeps that space for its sparkline.
+		if (placement == SecondNumberPlacement.RIGHT_SIDE && !full)
+		{
+			placement = SecondNumberPlacement.AFTER_CHANGE;
+		}
+		int numberGap = placement == SecondNumberPlacement.AFTER_CHANGE && full ? NUMBER_GAP : TIGHT_GAP;
 		if (number)
 		{
-			int needed = beside
-				? pct1W + NUMBER_GAP + pct2W + CHANGE_GAP + d1W + PAIR_GAP + d2W
-				: pct1W + CHANGE_GAP + d1W + NUMBER_GAP + pct2W + CHANGE_GAP + d2W;
+			int left = pct1W + CHANGE_GAP + d1W;
+			int needed;
+			switch (placement)
+			{
+				case BESIDE_FIRST:
+					needed = pct1W + numberGap + pct2W + CHANGE_GAP + d1W + PAIR_GAP + d2W;
+					break;
+				case RIGHT_SIDE:
+					needed = left + RIGHT_SIDE_MIN_GAP + pct2W + CHANGE_GAP + d2W;
+					break;
+				default:
+					needed = left + numberGap + pct2W + CHANGE_GAP + d2W;
+					break;
+			}
 			number = startX + needed <= limit;
 		}
 
@@ -436,9 +457,9 @@ final class MarketPainter
 		g.setFont(bigFont);
 		text(g, pct1, x, baseline, accent);
 		x += pct1W;
-		if (number && beside)
+		if (number && placement == SecondNumberPlacement.BESIDE_FIRST)
 		{
-			x += NUMBER_GAP;
+			x += numberGap;
 			g.setFont(bigFont);
 			text(g, pct2, x, baseline, accent2);
 			x += pct2W + CHANGE_GAP;
@@ -452,9 +473,19 @@ final class MarketPainter
 		{
 			return x;
 		}
+		if (number && placement == SecondNumberPlacement.RIGHT_SIDE)
+		{
+			// Line 2's number and change hug the right edge of the box.
+			int rx = limit - (pct2W + CHANGE_GAP + d2W);
+			g.setFont(bigFont);
+			text(g, pct2, rx, baseline, accent2);
+			rx += pct2W + CHANGE_GAP;
+			drawDelta(g, rx, baseline, delta2, accent2, config.line2FallingColor(), smallFont);
+			return limit;
+		}
 		if (number)
 		{
-			x += NUMBER_GAP;
+			x += numberGap;
 			g.setFont(bigFont);
 			text(g, pct2, x, baseline, accent2);
 			x += pct2W + CHANGE_GAP;

@@ -41,7 +41,7 @@ final class MarketPainter
 	private static final int COMPACT_BODY_H = 56;
 	private static final int TICKER_H = 20;
 	// Spacing in the odds row: big number to its change, between the two numbers, and between two changes.
-	private static final int CHANGE_GAP = 12;
+	private static final int CHANGE_GAP = 10;
 	private static final int NUMBER_GAP = 20;
 	private static final int PAIR_GAP = 10;
 	private static final int TIGHT_GAP = 8;

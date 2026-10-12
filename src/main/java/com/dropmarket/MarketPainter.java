@@ -14,6 +14,7 @@ import java.awt.geom.Path2D;
 import java.awt.geom.RoundRectangle2D;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.ToIntFunction;
 
 final class MarketPainter
 {
@@ -38,7 +39,9 @@ final class MarketPainter
 	private static final int PULSE_PERIOD_TICKS = 3;
 	private static final int BRAND_BAR_H = 14;
 	private static final int COMPACT_BODY_H = 56;
-	private static final int TICKER_H = 24;
+	private static final int TICKER_H = 20;
+	private static final int SCROLL_GAP = 28;
+	private static final int SCROLL_PX_PER_TICK = 8;
 
 	private MarketPainter()
 	{
@@ -248,7 +251,7 @@ final class MarketPainter
 			right -= 6;
 		}
 		g.setFont(titleFont);
-		text(g, ellipsize(title.toUpperCase(), titleFm, right - x), x, baseline, TITLE);
+		text(g, compactTitle(title, titleFm::stringWidth, right - x), x, baseline, TITLE);
 		y += titleFm.getHeight() + 2;
 
 		int pctBaseline = y + bigFm.getAscent();
@@ -319,8 +322,80 @@ final class MarketPainter
 		text(g, pctText, pctX, baseline, accent);
 		Font tickerTitleFont = smallFont.deriveFont(Font.BOLD);
 		g.setFont(tickerTitleFont);
-		text(g, ellipsize(title.toUpperCase(), g.getFontMetrics(tickerTitleFont), pctX - 8 - titleLeft), titleLeft,
-			baseline, TITLE);
+		FontMetrics tickerFm = g.getFontMetrics(tickerTitleFont);
+		int titleRight = pctX - 8;
+		String shortTitle = abbreviatedTitle(title);
+		if (tickerFm.stringWidth(shortTitle) <= titleRight - titleLeft)
+		{
+			text(g, shortTitle, titleLeft, baseline, TITLE);
+		}
+		else
+		{
+			scrollText(g, shortTitle, tickerFm, titleLeft, titleRight, baseline, nowTick);
+		}
+	}
+
+	/**
+	 * The title for the compact layouts: "THEATRE OF BLOOD DROPS SCYTHE OF VITUR" becomes "TOB DROPS SCYTHE OF VITUR"
+	 * (the wiki's short name), then "DROPS SCYTHE OF VITUR", then "DROPS SCYTHE" if the room runs out.
+	 */
+	static String compactTitle(String title, ToIntFunction<String> width, int maxWidth)
+	{
+		String upper = title.toUpperCase();
+		String verb = upper.contains(" DROPS ") ? " DROPS " : upper.contains(" GETS ") ? " GETS " : null;
+		if (verb == null)
+		{
+			return fit(upper, width, maxWidth);
+		}
+		int at = upper.indexOf(verb);
+		String item = upper.substring(at + verb.length());
+		String source = DropTables.abbreviation(title.substring(0, at)).toUpperCase();
+		String verbWord = verb.trim();
+		String firstWord = item.split(" ")[0];
+		for (String candidate : new String[]{source + verb + item, verbWord + " " + item, verbWord + " " + firstWord})
+		{
+			if (width.applyAsInt(candidate) <= maxWidth)
+			{
+				return candidate;
+			}
+		}
+		return fit(verbWord + " " + firstWord, width, maxWidth);
+	}
+
+	/** Source swapped for its wiki short name (ToB, CoX...), everything else untouched, upper-cased. */
+	static String abbreviatedTitle(String title)
+	{
+		String upper = title.toUpperCase();
+		String verb = upper.contains(" DROPS ") ? " DROPS " : upper.contains(" GETS ") ? " GETS " : null;
+		if (verb == null)
+		{
+			return upper;
+		}
+		int at = upper.indexOf(verb);
+		return DropTables.abbreviation(title.substring(0, at)).toUpperCase() + upper.substring(at);
+	}
+
+	/** Scrolls text right to left inside [left, right], looping like a stock ticker; one step per game tick. */
+	private static void scrollText(Graphics2D g, String s, FontMetrics fm, int left, int right, int baseline,
+		long nowTick)
+	{
+		int cycle = fm.stringWidth(s) + SCROLL_GAP;
+		int offset = (int) ((nowTick * SCROLL_PX_PER_TICK) % cycle);
+		java.awt.Shape oldClip = g.getClip();
+		g.clipRect(left, 0, right - left, baseline + fm.getDescent() + 4);
+		text(g, s, left - offset, baseline, TITLE);
+		text(g, s, left - offset + cycle, baseline, TITLE);
+		g.setClip(oldClip);
+	}
+
+	private static String fit(String s, ToIntFunction<String> width, int maxWidth)
+	{
+		String out = s;
+		while (out.length() > 1 && width.applyAsInt(out) > maxWidth)
+		{
+			out = out.substring(0, out.length() - 1);
+		}
+		return out.length() < s.length() ? out.trim() + "..." : out;
 	}
 
 	private static int deltaWidth(Graphics2D g, int delta, Font smallFont)

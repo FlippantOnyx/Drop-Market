@@ -186,7 +186,7 @@ public interface DropMarketConfig extends Config
 		name = "Overlay Layout",
 		description = "Full: the whole card with chart, volume and axis.<br>"
 			+ "Compact: a short card with the title, odds and a sparkline.<br>"
-			+ "Ticker: a single line, like a stock ticker (header bars are hidden).",
+			+ "Ticker: a single line, like a stock ticker (scrolls long titles; header bars are hidden).",
 		section = SECTION_DISPLAY,
 		position = 1
 	)

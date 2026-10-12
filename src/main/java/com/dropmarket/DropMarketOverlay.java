@@ -13,7 +13,7 @@ class DropMarketOverlay extends Overlay
 {
 	static final Dimension DEFAULT_SIZE = new Dimension(200, 192);
 	// A ticker strip needs more width than the card to leave room for the title.
-	private static final int TICKER_DEFAULT_WIDTH = 300;
+	private static final int TICKER_DEFAULT_WIDTH = 260;
 
 	private final Client client;
 	private final DropMarketPlugin plugin;

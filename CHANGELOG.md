@@ -2,7 +2,7 @@
 
 ## 1.2.0
 
-- Overlay Layout setting: Full, Compact (two rows with a sparkline) or Ticker (a single line)
+- Overlay Layout setting: Full, Compact (two rows with a sparkline, wiki abbreviations like ToB) or Ticker (a single scrolling line)
 - Optional Win Sound using built-in game sounds
 - Both lines now flash purple on a win when the second line is shown
 - Settings are grouped into collapsible sections with clearer names; saved settings are kept

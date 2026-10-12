@@ -1,5 +1,6 @@
 package com.dropmarket;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import java.awt.Color;
@@ -258,5 +259,50 @@ public class MarketPainterTest
 		assertTrue(MarketPainter.layoutHeight(config) > plain);
 		config.layout = OverlayLayout.TICKER;
 		assertTrue(MarketPainter.layoutHeight(config) < plain);
+	}
+
+	@Test
+	public void compactTitleUsesWikiAbbreviationsThenDropsTheSource()
+	{
+		// One unit per character keeps the widths easy to reason about.
+		java.util.function.ToIntFunction<String> chars = String::length;
+		String full = "Theatre of Blood drops Scythe of vitur";
+		assertEquals("TOB DROPS SCYTHE OF VITUR", MarketPainter.compactTitle(full, chars, 40));
+		assertEquals("DROPS SCYTHE OF VITUR", MarketPainter.compactTitle(full, chars, 24));
+		assertEquals("DROPS SCYTHE", MarketPainter.compactTitle(full, chars, 14));
+		assertEquals("TOB DROPS TWISTED BOW",
+			MarketPainter.compactTitle("Chambers of Xeric drops Twisted bow", chars, 40).replace("COX", "TOB"));
+		assertEquals("COX DROPS TWISTED BOW", MarketPainter.compactTitle("Chambers of Xeric drops Twisted bow", chars, 40));
+		assertEquals("ZULRAH DROPS TANZANITE FANG", MarketPainter.compactTitle("Zulrah drops Tanzanite fang", chars, 40));
+		assertEquals("KBD DROPS DRAGON PICKAXE", MarketPainter.compactTitle("King Black Dragon drops Dragon pickaxe", chars, 40));
+		assertEquals("LIVE ODDS", MarketPainter.compactTitle("LIVE ODDS", chars, 40));
+		assertEquals("GETS SCYTHE", MarketPainter.compactTitle("Bob GETS Scythe of vitur", chars, 12));
+	}
+
+	@Test
+	public void longTickerTitlesScrollEachTick() throws Exception
+	{
+		TestConfig config = new TestConfig();
+		config.layout = OverlayLayout.TICKER;
+		int h = MarketPainter.layoutHeight(config);
+		BufferedImage first = render("Theatre of Blood drops Scythe of vitur", false, 0, 200, h, config, null, 0);
+		BufferedImage later = render("Theatre of Blood drops Scythe of vitur", false, 3, 200, h, config, null, 0);
+		assertTrue(differs(first, later));
+		assertEquals("TOB DROPS SCYTHE OF VITUR", MarketPainter.abbreviatedTitle("Theatre of Blood drops Scythe of vitur"));
+	}
+
+	private static boolean differs(BufferedImage a, BufferedImage b)
+	{
+		for (int y = 0; y < a.getHeight(); y++)
+		{
+			for (int x = 0; x < a.getWidth(); x++)
+			{
+				if (a.getRGB(x, y) != b.getRGB(x, y))
+				{
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 }

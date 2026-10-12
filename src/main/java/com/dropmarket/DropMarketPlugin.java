@@ -1491,8 +1491,13 @@ public class DropMarketPlugin extends Plugin
 		{
 			client.playSoundEffect(sound.soundId());
 		}
-		resolvedDelta = (int) Math.round(100 - graph.current());
-		resolvedDelta2 = (int) Math.round(100 - polyGraph.current());
+		if (!resolved)
+		{
+			// Frozen at the jump to 100% for the whole celebration. A second drop landing while it is still pinned at
+			// 100 must not overwrite it (that would read 0%), and the change never reads 0% anyway.
+			resolvedDelta = Math.max(1, (int) Math.round(100 - graph.current()));
+			resolvedDelta2 = Math.max(1, (int) Math.round(100 - polyGraph.current()));
+		}
 		resolved = true;
 		resolvedTick = ticks;
 		showingMarket = true;

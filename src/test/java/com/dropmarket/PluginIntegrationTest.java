@@ -550,6 +550,33 @@ public class PluginIntegrationTest
 		Assert.assertEquals(Collections.emptyList(), rig.unexpectedFailures());
 	}
 
+	/** The change shown during a celebration is the jump to 100%, held steady, even if more drops land meanwhile. */
+	@Test
+	public void winDeltasHoldSteadyThroughTheCelebration() throws Exception
+	{
+		Rig rig = new Rig(Mode.NORMAL);
+		rig.plugin.startUp();
+		ChatMessage first = new ChatMessage(null, ChatMessageType.GAMEMESSAGE, "",
+			"New item added to your collection log: Tanzanite fang", null, 1);
+		rig.plugin.onChatMessage(first);
+		Assert.assertTrue("the drop resolved the market", rig.plugin.isResolved());
+		int delta = rig.plugin.getDisplayDelta();
+		int delta2 = rig.plugin.getDisplayDelta2();
+		Assert.assertTrue("jump is shown, not 0%: " + delta, delta > 0);
+		for (int i = 0; i < 30; i++)
+		{
+			rig.plugin.onGameTick(new GameTick());
+			if (i % 5 == 0)
+			{
+				rig.plugin.onChatMessage(new ChatMessage(null, ChatMessageType.GAMEMESSAGE, "",
+					"New item added to your collection log: Tanzanite fang", null, 2 + i));
+			}
+			Assert.assertEquals(delta, rig.plugin.getDisplayDelta());
+			Assert.assertEquals(delta2, rig.plugin.getDisplayDelta2());
+		}
+		Assert.assertEquals(Collections.emptyList(), rig.unexpectedFailures());
+	}
+
 	@Test
 	public void survivesStartingTwiceAndStoppingFirst() throws Exception
 	{

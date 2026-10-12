@@ -310,22 +310,24 @@ final class MarketPainter
 		int groupGap = 10;
 		int group1W = titleFm.stringWidth(pct1) + 6 + d1W;
 		int group2W = secondNumber ? titleFm.stringWidth(pct2) + 6 + d2W : secondDelta ? d2W : 0;
+		// The numbers sit 2px lower than the title so the two read as one level.
+		int numBaseline = baseline + 2;
 		int startX = right - (group1W + (group2W > 0 ? groupGap + group2W : 0));
 		int x = startX;
 		g.setFont(titleFont);
-		text(g, pct1, x, baseline, accent);
+		text(g, pct1, x, numBaseline, accent);
 		x += titleFm.stringWidth(pct1) + 6;
-		x += drawDelta(g, x, baseline, delta1, accent, config.line1FallingColor(), smallFont);
+		x += drawDelta(g, x, numBaseline, delta1, accent, config.line1FallingColor(), smallFont);
 		if (group2W > 0)
 		{
 			x += groupGap;
 			if (secondNumber)
 			{
 				g.setFont(titleFont);
-				text(g, pct2, x, baseline, accent2);
+				text(g, pct2, x, numBaseline, accent2);
 				x += titleFm.stringWidth(pct2) + 6;
 			}
-			drawDelta(g, x, baseline, delta2, accent2, config.line2FallingColor(), smallFont);
+			drawDelta(g, x, numBaseline, delta2, accent2, config.line2FallingColor(), smallFont);
 		}
 		Font tickerTitleFont = smallFont.deriveFont(Font.BOLD);
 		g.setFont(tickerTitleFont);
@@ -412,11 +414,10 @@ final class MarketPainter
 	}
 
 	/**
-	 * Draws line 1's big number and change, then line 2 after it. With the second number on, both lines' readouts sit
-	 * together at the right edge of the box (Full) or start at startX (Compact, which keeps the right for its
-	 * sparkline): by default "number change  number change", or with numbersBeforeChanges "number number change
-	 * change" five pixels apart. Without the second number, line 2's change just follows line 1's. Returns where
-	 * the row ended.
+	 * Draws line 1's big number and change on the left, then line 2. With the second number on, line 2's number and
+	 * change sit at the right edge of the box (Full) or follow line 1's (Compact, which keeps the right for its
+	 * sparkline). With numbersBeforeChanges everything runs left to right as "number number change change", five
+	 * pixels apart. Without the second number, line 2's change just follows line 1's. Returns where the row ended.
 	 */
 	private static int drawOdds(Graphics2D g, int startX, int baseline, int limit, boolean full, Font bigFont,
 		Font smallFont, Color accent, Color accent2, String pct1, String pct2, int delta1, int delta2,
@@ -440,7 +441,7 @@ final class MarketPainter
 
 		if (number)
 		{
-			int x = full ? limit - needed : startX;
+			int x = startX;
 			g.setFont(bigFont);
 			text(g, pct1, x, baseline, accent);
 			x += pct1W;
@@ -453,7 +454,9 @@ final class MarketPainter
 				return x + drawDelta(g, x, baseline, delta2, accent2, config.line2FallingColor(), smallFont);
 			}
 			x += CHANGE_GAP;
-			x += drawDelta(g, x, baseline, delta1, accent, config.line1FallingColor(), smallFont) + GROUP_GAP;
+			x += drawDelta(g, x, baseline, delta1, accent, config.line1FallingColor(), smallFont);
+			// Line 2's readout hugs the right edge in Full; Compact keeps that side for its sparkline.
+			x = full ? limit - (pct2W + CHANGE_GAP + d2W) : x + GROUP_GAP;
 			g.setFont(bigFont);
 			text(g, pct2, x, baseline, accent2);
 			x += pct2W + CHANGE_GAP;

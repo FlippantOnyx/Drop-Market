@@ -379,10 +379,9 @@ public class MarketPainterTest
 		BufferedImage perLine = render("Zulrah drops Tanzanite fang", false, 0, 260, 192, config, poly, 0);
 		config.numbersBeforeChanges = true;
 		BufferedImage numbersFirst = render("Zulrah drops Tanzanite fang", false, 0, 260, 192, config, poly, 0);
-		// Line 1 starts at the same place in both (the left end of the right-aligned group), but line 2's number
-		// is much closer to line 1's when the numbers come first.
+		// Line 2's number hugs the right side by default and moves next to line 1's when the numbers come first.
 		int line2PerLine = leftmostColorX(perLine, DropMarketConfig.DEFAULT_LINE2_COLOR, 70);
 		int line2NumbersFirst = leftmostColorX(numbersFirst, DropMarketConfig.DEFAULT_LINE2_COLOR, 70);
-		assertTrue(line2PerLine > 130 && line2NumbersFirst < line2PerLine);
+		assertTrue(line2PerLine > 130 && line2NumbersFirst < 100);
 	}
 }

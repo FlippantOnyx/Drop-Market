@@ -42,10 +42,9 @@ final class MarketPainter
 	private static final int TICKER_H = 20;
 	// Spacing in the odds row: big number to its change, between the two numbers, and between two changes.
 	private static final int CHANGE_GAP = 7;
-	private static final int NUMBER_GAP = 20;
+	private static final int GROUP_GAP = 14;
 	private static final int PAIR_GAP = 10;
-	private static final int TIGHT_GAP = 8;
-	private static final int RIGHT_SIDE_MIN_GAP = 12;
+	private static final int TIGHT_GAP = 5;
 	private static final int SCROLL_GAP = 28;
 	private static final int SCROLL_PX_PER_TICK = 8;
 
@@ -413,9 +412,11 @@ final class MarketPainter
 	}
 
 	/**
-	 * Draws line 1's big number and change, then line 2 after it: just its change when the second number is off,
-	 * otherwise its number and change, either pinned to the right edge of the box (Full, when "pin" is on) or
-	 * following line 1's change. Returns where the row ended.
+	 * Draws line 1's big number and change, then line 2 after it. With the second number on, both lines' readouts sit
+	 * together at the right edge of the box (Full) or start at startX (Compact, which keeps the right for its
+	 * sparkline): by default "number change  number change", or with numbersBeforeChanges "number number change
+	 * change" five pixels apart. Without the second number, line 2's change just follows line 1's. Returns where
+	 * the row ended.
 	 */
 	private static int drawOdds(Graphics2D g, int startX, int baseline, int limit, boolean full, Font bigFont,
 		Font smallFont, Color accent, Color accent2, String pct1, String pct2, int delta1, int delta2,
@@ -427,17 +428,36 @@ final class MarketPainter
 		int d2W = pct2 == null ? 0 : deltaWidth(g, delta2, smallFont);
 		int pct2W = pct2 == null ? 0 : bigFm.stringWidth(pct2);
 		boolean number = pct2 != null && config.showSecondNumber();
-		// The right edge needs the whole box; Compact keeps that space for its sparkline.
-		boolean pinRight = full && config.pinSecondNumberRight();
-		// After line 1's change the number gets a bit of room in Full and stays tight in Compact.
-		int numberGap = full ? NUMBER_GAP : TIGHT_GAP;
+		boolean numbersFirst = config.numbersBeforeChanges();
+		int needed = 0;
 		if (number)
 		{
-			int line1W = pct1W + CHANGE_GAP + d1W;
-			int needed = pinRight
-				? line1W + RIGHT_SIDE_MIN_GAP + pct2W + CHANGE_GAP + d2W
-				: line1W + numberGap + pct2W + CHANGE_GAP + d2W;
+			needed = numbersFirst
+				? pct1W + TIGHT_GAP + pct2W + TIGHT_GAP + d1W + TIGHT_GAP + d2W
+				: pct1W + CHANGE_GAP + d1W + GROUP_GAP + pct2W + CHANGE_GAP + d2W;
 			number = startX + needed <= limit;
+		}
+
+		if (number)
+		{
+			int x = full ? limit - needed : startX;
+			g.setFont(bigFont);
+			text(g, pct1, x, baseline, accent);
+			x += pct1W;
+			if (numbersFirst)
+			{
+				x += TIGHT_GAP;
+				text(g, pct2, x, baseline, accent2);
+				x += pct2W + TIGHT_GAP;
+				x += drawDelta(g, x, baseline, delta1, accent, config.line1FallingColor(), smallFont) + TIGHT_GAP;
+				return x + drawDelta(g, x, baseline, delta2, accent2, config.line2FallingColor(), smallFont);
+			}
+			x += CHANGE_GAP;
+			x += drawDelta(g, x, baseline, delta1, accent, config.line1FallingColor(), smallFont) + GROUP_GAP;
+			g.setFont(bigFont);
+			text(g, pct2, x, baseline, accent2);
+			x += pct2W + CHANGE_GAP;
+			return x + drawDelta(g, x, baseline, delta2, accent2, config.line2FallingColor(), smallFont);
 		}
 
 		int x = startX;
@@ -449,28 +469,8 @@ final class MarketPainter
 		{
 			return x;
 		}
-		if (number && pinRight)
-		{
-			// Line 2's number and change hug the right edge of the box.
-			int rx = limit - (pct2W + CHANGE_GAP + d2W);
-			g.setFont(bigFont);
-			text(g, pct2, rx, baseline, accent2);
-			rx += pct2W + CHANGE_GAP;
-			drawDelta(g, rx, baseline, delta2, accent2, config.line2FallingColor(), smallFont);
-			return limit;
-		}
-		if (number)
-		{
-			x += numberGap;
-			g.setFont(bigFont);
-			text(g, pct2, x, baseline, accent2);
-			x += pct2W + CHANGE_GAP;
-		}
-		else
-		{
-			// No second number: line 2's change simply follows line 1's.
-			x += PAIR_GAP;
-		}
+		// No second number: line 2's change simply follows line 1's.
+		x += PAIR_GAP;
 		return x + drawDelta(g, x, baseline, delta2, accent2, config.line2FallingColor(), smallFont);
 	}
 

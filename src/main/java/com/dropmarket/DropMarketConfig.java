@@ -293,16 +293,17 @@ public interface DropMarketConfig extends Config
 	}
 
 	@ConfigItem(
-		keyName = "pinSecondNumberRight",
-		name = "Pin Second Number to Right Edge",
-		description = "With the second odds number on: put it and its change at the right edge of the box (Full layout).<br>"
-			+ "Off: it follows line 1's change instead. Without the second number, line 2's change always sits after line 1's.",
+		keyName = "numbersBeforeChanges",
+		name = "Numbers Before Changes",
+		description = "With the second odds number on, both readouts sit at the right of the box.<br>"
+			+ "Off: line 1 number and change, then line 2 number and change.<br>"
+			+ "On: line 1 number, line 2 number, line 1 change, line 2 change, all 5 px apart.",
 		section = SECTION_LINES,
 		position = 5
 	)
-	default boolean pinSecondNumberRight()
+	default boolean numbersBeforeChanges()
 	{
-		return true;
+		return false;
 	}
 
 	@ConfigItem(

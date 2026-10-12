@@ -26,15 +26,14 @@ final class DropQualifier
 
 	/**
 	 * A received item. The lists trump everything: a blacklisted item never counts (not even under Pop Off), and a
-	 * priority item always counts, whatever it's worth. Otherwise Pop Off counts everything (down to its minimum
-	 * value); a collection log item new to the account always counts (a log drop that isn't new is price-checked like any
-	 * other drop); before prices load only a collection log slot counts;
-	 * an unpriced item counts when it's a known chase (on the table, the market's own target, or a collection log
+	 * priority item always counts, whatever it's worth. Otherwise Pop Off counts everything; a collection log
+	 * item new to the account always counts (a log drop that isn't new is price-checked like any other drop); before
+	 * prices load only a collection log slot counts; an unpriced item counts when it's a known chase (on the table, the market's own target, or a collection log
 	 * slot) since it can't be judged on value; and a priced item must be on the table or be the target and clear the
-	 * valuable-drop threshold.
+	 * win minimum value.
 	 */
 	static boolean lootQualifies(long price, long threshold, boolean onTable, boolean isTarget, boolean clogSlot,
-		boolean newLogItem, ListStatus list, boolean popOff, long popOffMin)
+		boolean newLogItem, ListStatus list, boolean popOff)
 	{
 		if (list == ListStatus.BLACKLISTED)
 		{
@@ -44,10 +43,9 @@ final class DropQualifier
 		{
 			return true;
 		}
-		boolean chase = onTable || isTarget || clogSlot;
 		if (popOff)
 		{
-			return popOffMin <= 0 || price >= popOffMin || newLogItem || (price == NO_PRICE && chase);
+			return true;
 		}
 		if (newLogItem)
 		{
@@ -61,14 +59,14 @@ final class DropQualifier
 		}
 		if (price == NO_PRICE)
 		{
-			return chase;
+			return onTable || isTarget || clogSlot;
 		}
 		return (onTable || isTarget) && price >= threshold;
 	}
 
 	/** The game's "Valuable drop" chat message; {@code value} is negative when it couldn't be determined. */
 	static boolean valuableMessageQualifies(long value, long threshold, boolean newLogItem, ListStatus list,
-		boolean popOff, long popOffMin)
+		boolean popOff)
 	{
 		if (list != ListStatus.NONE)
 		{
@@ -76,7 +74,7 @@ final class DropQualifier
 		}
 		if (popOff)
 		{
-			return popOffMin <= 0 || value < 0 || value >= popOffMin || newLogItem;
+			return true;
 		}
 		// The game flagged it as valuable but we can't price it (a brand new item): trust the game.
 		return newLogItem || value < 0 || value >= threshold;

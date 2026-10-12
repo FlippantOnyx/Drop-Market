@@ -20,13 +20,13 @@ public class MarketPainterTest
 
 	private static final class TestConfig implements DropMarketConfig
 	{
-		Color graphColor = DEFAULT_LINE_COLOR;
+		Color line1Color = DEFAULT_LINE_COLOR;
 		Color line2Color = DEFAULT_LINE2_COLOR;
-		Color negativeDeltaColor1 = DEFAULT_NEGATIVE_DELTA_COLOR;
-		Color negativeDeltaColor2 = DEFAULT_NEGATIVE_DELTA_COLOR;
+		Color line1FallingColor = DEFAULT_NEGATIVE_DELTA_COLOR;
+		Color line2FallingColor = DEFAULT_NEGATIVE_DELTA_COLOR;
 		boolean showBar1;
 		boolean showBar2;
-		boolean showDualLine;
+		boolean showSecondLine;
 		Color bar1Color = DEFAULT_BAR1_COLOR;
 		Color bar2Color = DEFAULT_BAR2_COLOR;
 		Color bar1TextColor = Color.WHITE;
@@ -35,9 +35,9 @@ public class MarketPainterTest
 		String bar2Text = "";
 
 		@Override
-		public Color graphColor()
+		public Color line1Color()
 		{
-			return graphColor;
+			return line1Color;
 		}
 
 		@Override
@@ -47,15 +47,15 @@ public class MarketPainterTest
 		}
 
 		@Override
-		public Color negativeDeltaColor1()
+		public Color line1FallingColor()
 		{
-			return negativeDeltaColor1;
+			return line1FallingColor;
 		}
 
 		@Override
-		public Color negativeDeltaColor2()
+		public Color line2FallingColor()
 		{
-			return negativeDeltaColor2;
+			return line2FallingColor;
 		}
 
 		@Override
@@ -71,9 +71,9 @@ public class MarketPainterTest
 		}
 
 		@Override
-		public boolean showDualLine()
+		public boolean showSecondLine()
 		{
-			return showDualLine;
+			return showSecondLine;
 		}
 
 		@Override
@@ -196,7 +196,7 @@ public class MarketPainterTest
 		TestConfig config = new TestConfig();
 		config.showBar1 = true;
 		config.showBar2 = true;
-		config.showDualLine = true;
+		config.showSecondLine = true;
 		config.bar1Text = "Line 1 Odds";
 		config.bar2Text = "Line 2 Odds";
 		BufferedImage img = render("Zulrah drops Tanzanite fang", false, 0, W, H, config, poly, 1_400_000L);
@@ -210,7 +210,7 @@ public class MarketPainterTest
 		MarketGraph poly = new MarketGraph(new Random(99));
 		poly.reset();
 		TestConfig config = new TestConfig();
-		config.showDualLine = true;
+		config.showSecondLine = true;
 		BufferedImage idle = render("Zulrah drops Tanzanite fang", false, 0, W, H, config, poly, 0);
 		BufferedImage flashing = render("Zulrah drops Tanzanite fang", true, 0, W, H, config, poly, 0);
 		assertTrue(containsColor(idle, DropMarketConfig.DEFAULT_LINE2_COLOR));

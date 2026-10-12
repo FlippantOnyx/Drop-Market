@@ -4,9 +4,11 @@ import java.awt.Color;
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
+import net.runelite.client.config.ConfigSection;
 import net.runelite.client.config.Range;
 import net.runelite.client.config.Units;
 
+// Keep every keyName stable: it is what a player's saved settings are stored under.
 @ConfigGroup(DropMarketConfig.GROUP)
 public interface DropMarketConfig extends Config
 {
@@ -18,49 +20,21 @@ public interface DropMarketConfig extends Config
 	// Classic stock-ticker red for a negative move.
 	Color DEFAULT_NEGATIVE_DELTA_COLOR = new Color(0xE5484D);
 
-	@ConfigItem(
-		keyName = "graphColor",
-		name = "Line 1 Color",
-		description = "Color of the main odds line",
+	String SECTION_DROPS = "dropLists";
+	String SECTION_WINS = "winRules";
+	String SECTION_CELEBRATION = "celebration";
+	String SECTION_DATA = "dataSources";
+	String SECTION_LINES = "graphLines";
+	String SECTION_BARS = "headerBars";
+
+	// ---- Drop lists ---------------------------------------------------------------------------------------------
+
+	@ConfigSection(
+		name = "Drop Lists",
+		description = "Drops to always bet on, and drops to never count",
 		position = 1
 	)
-	default Color graphColor()
-	{
-		return DEFAULT_LINE_COLOR;
-	}
-
-	@ConfigItem(
-		keyName = "line2Color",
-		name = "Line 2 Color",
-		description = "Color of the second, independent odds line",
-		position = 2
-	)
-	default Color line2Color()
-	{
-		return DEFAULT_LINE2_COLOR;
-	}
-
-	@ConfigItem(
-		keyName = "negativeDeltaColor1",
-		name = "Line 1 Negative Delta Color",
-		description = "Color of line 1's change indicator when it drops",
-		position = 3
-	)
-	default Color negativeDeltaColor1()
-	{
-		return DEFAULT_NEGATIVE_DELTA_COLOR;
-	}
-
-	@ConfigItem(
-		keyName = "negativeDeltaColor2",
-		name = "Line 2 Negative Delta Color",
-		description = "Color of line 2's change indicator when it drops",
-		position = 4
-	)
-	default Color negativeDeltaColor2()
-	{
-		return DEFAULT_NEGATIVE_DELTA_COLOR;
-	}
+	String dropListsSection = SECTION_DROPS;
 
 	@ConfigItem(
 		keyName = "priorityItems",
@@ -69,9 +43,10 @@ public interface DropMarketConfig extends Config
 			+ "A priority drop always counts as a win when you get it, whatever it's worth.<br>"
 			+ "e.g. 'Chambers of Xeric: Dexterous prayer scroll' or 'Zulrah: Serpentine visage'.<br>"
 			+ "Raids also accept CoX / ToB / ToA. Multiple lines for the same source are rolled between evenly.",
-		position = 5
+		section = SECTION_DROPS,
+		position = 1
 	)
-	default String priorityItems()
+	default String priorityDrops()
 	{
 		return "";
 	}
@@ -82,39 +57,113 @@ public interface DropMarketConfig extends Config
 		description = "One per line as 'Source: Item' to never bet on or celebrate that item.<br>"
 			+ "e.g. 'Zulrah: Tanzanite fang' or 'CoX: Dexterous prayer scroll'.<br>"
 			+ "Raids also accept CoX / ToB / ToA. Trumps everything, including priority drops and Pop Off on Every Drop.",
-		position = 6
+		section = SECTION_DROPS,
+		position = 2
 	)
-	default String blacklistItems()
+	default String blacklistedDrops()
 	{
 		return "";
 	}
 
+	// ---- Market and win rules -----------------------------------------------------------------------------------
+
+	@ConfigSection(
+		name = "Market & Win Rules",
+		description = "Which monsters get a market, and what counts as a win",
+		position = 2
+	)
+	String winRulesSection = SECTION_WINS;
+
+	@ConfigItem(
+		keyName = "minimumDropValue",
+		name = "Market Minimum Drop Value",
+		description = "Which monsters get a market (what the market bets on): if a monster's best tradeable drop<br>"
+			+ "is worth less than this it shows LIVE ODDS, unless it drops a collection log item you haven't unlocked.<br>"
+			+ "Not the same as Win Minimum Drop Value, which decides what counts as a win.",
+		section = SECTION_WINS,
+		position = 1
+	)
+	@Range(min = 0)
+	@Units(" gp")
+	default int marketMinimumValue()
+	{
+		return 250_000;
+	}
+
 	@ConfigItem(
 		keyName = "valuableDropThreshold",
-		name = "Valuable Drop Min Threshold",
+		name = "Win Minimum Drop Value",
 		description = "Minimum value for a success hit on the odds (what counts as a win, once a market is showing):<br>"
 			+ "a drop worth less than this won't resolve the market or flash.<br>"
-			+ "Items with no GE price (untradeable, or too new for the GE) always count if they're a real chase.<br>"
-			+ "Not the same as Lowest Value GP From Monster, which decides what the market bets on.",
-		position = 7
+			+ "A collection log item new to your account, or one with no GE price, still counts.<br>"
+			+ "Not the same as Market Minimum Drop Value, which decides what the market bets on.",
+		section = SECTION_WINS,
+		position = 2
 	)
-	default int valuableDropThreshold()
+	@Range(min = 0)
+	@Units(" gp")
+	default int winMinimumValue()
 	{
 		return 2_000_000;
 	}
 
 	@ConfigItem(
-		keyName = "minimumDropValue",
-		name = "Lowest Value GP From Monster",
-		description = "Which monsters get a market (what the market bets on): if a monster's best tradeable drop<br>"
-			+ "is worth less than this it shows LIVE ODDS, unless it drops a collection log item you haven't unlocked.<br>"
-			+ "Not the same as Valuable Drop Min Threshold, which decides what counts as a win.",
-		position = 8
+		keyName = "popOffOnEveryDrop",
+		name = "Pop Off on Every Drop",
+		description = "Treat every drop you receive as a win, ignoring Win Minimum Drop Value.<br>"
+			+ "Blacklisted drops still never count, and priority drops always do.",
+		section = SECTION_WINS,
+		position = 3
 	)
-	default int minimumDropValue()
+	default boolean popOffOnEveryDrop()
 	{
-		return 250_000;
+		return false;
 	}
+
+	// ---- Celebration --------------------------------------------------------------------------------------------
+
+	@ConfigSection(
+		name = "Celebration",
+		description = "How a win looks and how long it lasts",
+		position = 3
+	)
+	String celebrationSection = SECTION_CELEBRATION;
+
+	@ConfigItem(
+		keyName = "flashOnDrop",
+		name = "Flash Purple on Win",
+		description = "Flash the overlay purple when a drop hits (both lines too, when the second line is shown)",
+		section = SECTION_CELEBRATION,
+		position = 1
+	)
+	default boolean flashOnWin()
+	{
+		return true;
+	}
+
+	@ConfigItem(
+		keyName = "celebrationSeconds",
+		name = "Celebration Seconds",
+		description = "How long a win stays on screen before the overlay goes back to normal",
+		section = SECTION_CELEBRATION,
+		position = 2
+	)
+	@Range(min = 5, max = 120)
+	@Units(Units.SECONDS)
+	default int celebrationSeconds()
+	{
+		return 15;
+	}
+
+	// ---- Data sources (opt-in, third party) ---------------------------------------------------------------------
+
+	@ConfigSection(
+		name = "Data Sources",
+		description = "Optional lookups that contact third-party servers",
+		position = 4,
+		closedByDefault = true
+	)
+	String dataSourcesSection = SECTION_DATA;
 
 	@ConfigItem(
 		keyName = "runeProfileSync",
@@ -122,7 +171,8 @@ public interface DropMarketConfig extends Config
 		description = "Read your collection log from RuneProfile (requires the RuneProfile plugin to have synced it).<br>"
 			+ "Without this, unlocks are learned by browsing your collection log in-game.",
 		warning = "This feature submits your IP address to a 3rd-party server not controlled or verified by RuneLite developers",
-		position = 9
+		section = SECTION_DATA,
+		position = 1
 	)
 	default boolean runeProfileSync()
 	{
@@ -135,18 +185,99 @@ public interface DropMarketConfig extends Config
 		description = "Live-look up drop tables on the OSRS Wiki for monsters missing from the tables bundled in the plugin<br>"
 			+ "(most monsters are bundled and need no lookup)",
 		warning = "This feature submits your IP address to a 3rd-party server not controlled or verified by RuneLite developers",
-		position = 10
+		section = SECTION_DATA,
+		position = 2
 	)
 	default boolean wikiLookup()
 	{
 		return false;
 	}
 
+	// ---- Graph lines --------------------------------------------------------------------------------------------
+
+	@ConfigSection(
+		name = "Graph Lines",
+		description = "Colors of the two odds lines and their change indicators",
+		position = 5
+	)
+	String graphLinesSection = SECTION_LINES;
+
+	@ConfigItem(
+		keyName = "graphColor",
+		name = "Line 1 Color",
+		description = "Color of the main odds line",
+		section = SECTION_LINES,
+		position = 1
+	)
+	default Color line1Color()
+	{
+		return DEFAULT_LINE_COLOR;
+	}
+
+	@ConfigItem(
+		keyName = "negativeDeltaColor1",
+		name = "Line 1 Falling Color",
+		description = "Color of line 1's change indicator when it drops",
+		section = SECTION_LINES,
+		position = 2
+	)
+	default Color line1FallingColor()
+	{
+		return DEFAULT_NEGATIVE_DELTA_COLOR;
+	}
+
+	@ConfigItem(
+		keyName = "showDualLine",
+		name = "Show Second Line",
+		description = "Display a second independent odds line alongside the main line",
+		section = SECTION_LINES,
+		position = 3
+	)
+	default boolean showSecondLine()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		keyName = "line2Color",
+		name = "Line 2 Color",
+		description = "Color of the second, independent odds line",
+		section = SECTION_LINES,
+		position = 4
+	)
+	default Color line2Color()
+	{
+		return DEFAULT_LINE2_COLOR;
+	}
+
+	@ConfigItem(
+		keyName = "negativeDeltaColor2",
+		name = "Line 2 Falling Color",
+		description = "Color of line 2's change indicator when it drops",
+		section = SECTION_LINES,
+		position = 5
+	)
+	default Color line2FallingColor()
+	{
+		return DEFAULT_NEGATIVE_DELTA_COLOR;
+	}
+
+	// ---- Header bars --------------------------------------------------------------------------------------------
+
+	@ConfigSection(
+		name = "Header Bars",
+		description = "Two optional colored bars across the top of the overlay",
+		position = 6,
+		closedByDefault = true
+	)
+	String headerBarsSection = SECTION_BARS;
+
 	@ConfigItem(
 		keyName = "showBar1",
 		name = "Show Bar 1",
 		description = "Show the top colored bar across the top of the overlay",
-		position = 11
+		section = SECTION_BARS,
+		position = 1
 	)
 	default boolean showBar1()
 	{
@@ -154,82 +285,11 @@ public interface DropMarketConfig extends Config
 	}
 
 	@ConfigItem(
-		keyName = "showBar2",
-		name = "Show Bar 2",
-		description = "Show the second colored bar across the top of the overlay",
-		position = 12
-	)
-	default boolean showBar2()
-	{
-		return false;
-	}
-
-	@ConfigItem(
-		keyName = "showDualLine",
-		name = "Show Dual Line",
-		description = "Display a second independent price line alongside the main line",
-		position = 13
-	)
-	default boolean showDualLine()
-	{
-		return false;
-	}
-
-	@ConfigItem(
-		keyName = "flashOnDrop",
-		name = "Flash On Drop",
-		description = "Flash the overlay purple when a drop hits",
-		position = 14
-	)
-	default boolean flashOnDrop()
-	{
-		return true;
-	}
-
-	@ConfigItem(
-		keyName = "celebrationSeconds",
-		name = "Celebration Seconds",
-		description = "How long a win stays on screen before the overlay goes back to normal",
-		position = 15
-	)
-	@Range(min = 5, max = 120)
-	@Units(Units.SECONDS)
-	default int celebrationSeconds()
-	{
-		return 15;
-	}
-
-	@ConfigItem(
-		keyName = "popOffOnEveryDrop",
-		name = "Pop Off on Every Drop",
-		description = "Treat every drop you receive as a success, ignoring the valuable drop threshold.<br>"
-			+ "Blacklisted drops still never count, and priority drops always do.",
-		position = 16
-	)
-	default boolean popOffOnEveryDrop()
-	{
-		return false;
-	}
-
-	@ConfigItem(
-		keyName = "popOffMinValue",
-		name = "Pop Off Min Value",
-		description = "Pop Off on Every Drop only counts drops worth at least this much (0 = every drop).<br>"
-			+ "Items with no GE price yet, like brand new collection log items, always count.",
-		position = 17
-	)
-	@Range(min = 0)
-	@Units(" gp")
-	default int popOffMinValue()
-	{
-		return 0;
-	}
-
-	@ConfigItem(
 		keyName = "bar1Color",
 		name = "Bar 1 Color",
 		description = "Color of the top bar",
-		position = 18
+		section = SECTION_BARS,
+		position = 2
 	)
 	default Color bar1Color()
 	{
@@ -237,43 +297,11 @@ public interface DropMarketConfig extends Config
 	}
 
 	@ConfigItem(
-		keyName = "bar2Color",
-		name = "Bar 2 Color",
-		description = "Color of the second bar",
-		position = 19
-	)
-	default Color bar2Color()
-	{
-		return DEFAULT_BAR2_COLOR;
-	}
-
-	@ConfigItem(
-		keyName = "bar1TextColor",
-		name = "Bar 1 Text Color",
-		description = "Color of the text displayed in the top bar",
-		position = 20
-	)
-	default Color bar1TextColor()
-	{
-		return Color.WHITE;
-	}
-
-	@ConfigItem(
-		keyName = "bar2TextColor",
-		name = "Bar 2 Text Color",
-		description = "Color of the text displayed in the second bar",
-		position = 21
-	)
-	default Color bar2TextColor()
-	{
-		return Color.BLACK;
-	}
-
-	@ConfigItem(
 		keyName = "bar1Text",
 		name = "Bar 1 Text",
 		description = "Custom text to display in the top bar (leave blank for no text)",
-		position = 22
+		section = SECTION_BARS,
+		position = 3
 	)
 	default String bar1Text()
 	{
@@ -281,13 +309,62 @@ public interface DropMarketConfig extends Config
 	}
 
 	@ConfigItem(
+		keyName = "bar1TextColor",
+		name = "Bar 1 Text Color",
+		description = "Color of the text displayed in the top bar",
+		section = SECTION_BARS,
+		position = 4
+	)
+	default Color bar1TextColor()
+	{
+		return Color.WHITE;
+	}
+
+	@ConfigItem(
+		keyName = "showBar2",
+		name = "Show Bar 2",
+		description = "Show the second colored bar across the top of the overlay",
+		section = SECTION_BARS,
+		position = 5
+	)
+	default boolean showBar2()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		keyName = "bar2Color",
+		name = "Bar 2 Color",
+		description = "Color of the second bar",
+		section = SECTION_BARS,
+		position = 6
+	)
+	default Color bar2Color()
+	{
+		return DEFAULT_BAR2_COLOR;
+	}
+
+	@ConfigItem(
 		keyName = "bar2Text",
 		name = "Bar 2 Text",
 		description = "Custom text to display in the second bar (leave blank for no text)",
-		position = 23
+		section = SECTION_BARS,
+		position = 7
 	)
 	default String bar2Text()
 	{
 		return "";
+	}
+
+	@ConfigItem(
+		keyName = "bar2TextColor",
+		name = "Bar 2 Text Color",
+		description = "Color of the text displayed in the second bar",
+		section = SECTION_BARS,
+		position = 8
+	)
+	default Color bar2TextColor()
+	{
+		return Color.BLACK;
 	}
 }

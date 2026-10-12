@@ -214,10 +214,10 @@ public class DropMarketPlugin extends Plugin
 	@Override
 	protected void startUp()
 	{
-		priorities = DropTables.parsePriorities(config.priorityItems());
+		priorities = DropTables.parsePriorities(config.priorityDrops());
 		BundledDropTables.configure(gson);
 		UniqueDrops.configure(gson);
-		blacklist = DropTables.parsePriorities(config.blacklistItems());
+		blacklist = DropTables.parsePriorities(config.blacklistedDrops());
 		ticks = 0;
 		loginTick = 0;
 		killCounts.clear();
@@ -653,8 +653,8 @@ public class DropMarketPlugin extends Plugin
 					value = price == DropQualifier.NO_PRICE || price == DropQualifier.PRICES_NOT_LOADED ? -1 : price;
 				}
 				boolean newLogItem = UniqueDrops.isLogDrop(currentSource(), item) && !clog.isObtained(item);
-				if (DropQualifier.valuableMessageQualifies(value, config.valuableDropThreshold(), newLogItem,
-					listStatusHere(item), config.popOffOnEveryDrop(), config.popOffMinValue()))
+				if (DropQualifier.valuableMessageQualifies(value, config.winMinimumValue(), newLogItem,
+					listStatusHere(item), config.popOffOnEveryDrop()))
 				{
 					celebrateDrop(item);
 				}
@@ -713,8 +713,8 @@ public class DropMarketPlugin extends Plugin
 		{
 			return;
 		}
-		priorities = DropTables.parsePriorities(config.priorityItems());
-		blacklist = DropTables.parsePriorities(config.blacklistItems());
+		priorities = DropTables.parsePriorities(config.priorityDrops());
+		blacklist = DropTables.parsePriorities(config.blacklistedDrops());
 		repickMarket();
 	}
 
@@ -950,7 +950,7 @@ public class DropMarketPlugin extends Plugin
 	{
 		List<String> table = new ArrayList<>(fullTable);
 		table.removeIf(item -> isBlacklisted(source, fullTable, item));
-		String picked = MarketPicker.pick(table, DropTables.isPetFirst(source), config.minimumDropValue(),
+		String picked = MarketPicker.pick(table, DropTables.isPetFirst(source), config.marketMinimumValue(),
 			this::priceOf, item -> isLockedSlot(item, fromWiki));
 		if (DropTables.isPetFirst(source))
 		{
@@ -1045,8 +1045,8 @@ public class DropMarketPlugin extends Plugin
 			boolean logDrop = UniqueDrops.isLogDrop(marketSource, name);
 			// A log item you haven't got yet opens a new collection log slot; repeats of common ones get price-checked.
 			boolean newLogItem = logDrop && !clog.isObtained(name);
-			boolean qualifies = DropQualifier.lootQualifies(price, config.valuableDropThreshold(), onTable, isTarget,
-				slot, newLogItem, listStatus(marketSource, table, name), popOff, config.popOffMinValue());
+			boolean qualifies = DropQualifier.lootQualifies(price, config.winMinimumValue(), onTable, isTarget,
+				slot, newLogItem, listStatus(marketSource, table, name), popOff);
 			// A table/target item with no market value is a collection log chase we haven't seen yet: learn it.
 			if (slot || logDrop || ((isTarget || onTable) && price == DropQualifier.NO_PRICE))
 			{

@@ -5,10 +5,10 @@
 - Abyssal Sire's market is the Unsired; at the Font of Consumption with an Unsired you get an "UNSIRED DROPS X" market valued by the rewards you can still get
 - Multi-part drops (Noxious halberd, Abyssal bludgeon) split the finished item's value across the parts you're missing and skip parts you already hold
 - Fix: a win no longer keeps flashing while you keep killing the same monster; it ends after Celebration Seconds
-- Repeat untradeable uniques (e.g. Xeric's talisman) no longer count as wins unless they are new to your log, a pet, or a part of an expensive item (icons, fangs, Mokhaiotl cloth...)
+- Repeat untradeable uniques (e.g. Xeric's talisman) no longer count as wins unless they are new to your log, or a pet (or a drop that crafts into something expensive, see below)
 - Untradeable drops that craft into expensive items (vestiges, Araxyte fang, Mokhaiotl cloth...) are valued at the price of what they become, so Vardorvis counts the Ultor vestige as a 110m drop. Soulreaper axe parts just count as worth celebrating
 - "New to your log" is only trusted when RuneProfile sync has the whole log; otherwise the game's own new-collection-log message is used, so an item you already own no longer flashes as new
-- A second big odds number (Show Second Odds Number) with a position setting; Steady now ranges about 6-72%
+- A second big odds number (Show Second Odds Number) shown at the right of the box; Steady now ranges about 6-72%
 - Drift profiles last 10-15 minutes on an internal clock and only change after a finished kill or action, whatever the activity
 - Odds now move in "drift profiles": Steady (everyday), Climber (rises toward ~90 as a fight nears its end), Choppy, Sleeper, Spike and Fader; everyday highs top out around 82
 - Overlay Layout setting: Full, Compact (two rows with a sparkline, wiki abbreviations like ToB) or Ticker (a single scrolling line)

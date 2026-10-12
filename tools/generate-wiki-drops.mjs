@@ -10,7 +10,7 @@ const OUT_DIR = new URL('../src/main/resources/com/dropmarket/', import.meta.url
 const CLOG_URL = 'https://oldschool.runescape.wiki/w/Module:Collection_log/data.json?action=raw';
 const PAGE = 5000;
 const KEEP_PER_MONSTER = 15;
-const USER_AGENT = 'PredictionMarketDrops-snapshot (RuneLite plugin; https://github.com/FlippantOnyx/Drop-Market)';
+const USER_AGENT = 'PredictionMarketDrops-snapshot (RuneLite plugin; https://github.com/TaikiShuttleRS/Drop-Market)';
 
 // Must match DropTables.normalize in the plugin.
 const normalize = (s) => s.replace(/ /g, ' ').toLowerCase().replace(/\(.*?\)/g, ' ')

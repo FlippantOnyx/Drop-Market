@@ -58,7 +58,7 @@ import net.runelite.http.api.item.ItemPrice;
 
 @Slf4j
 @PluginDescriptor(
-	name = "Drop Prediction Market",
+	name = "Prediction Market Drops",
 	description = "A tiny prediction-market graph betting on your next big drop",
 	tags = {"drop", "loot", "odds", "graph", "market", "raids", "fun", "prediction market", "kalshi", "polymarket"}
 )

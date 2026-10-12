@@ -1,5 +1,6 @@
 package com.dropmarket;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import java.awt.Color;
 import java.awt.Graphics2D;
@@ -201,5 +202,20 @@ public class MarketPainterTest
 		BufferedImage img = render("Zulrah drops Tanzanite fang", false, 0, W, H, config, poly, 1_400_000L);
 		save(img, "brand-bars");
 		assertTrue(containsColor(img, DropMarketConfig.DEFAULT_LINE_COLOR));
+	}
+
+	@Test
+	public void flashTurnsBothLinesPurple() throws Exception
+	{
+		MarketGraph poly = new MarketGraph(new Random(99));
+		poly.reset();
+		TestConfig config = new TestConfig();
+		config.showDualLine = true;
+		BufferedImage idle = render("Zulrah drops Tanzanite fang", false, 0, W, H, config, poly, 0);
+		BufferedImage flashing = render("Zulrah drops Tanzanite fang", true, 0, W, H, config, poly, 0);
+		assertTrue(containsColor(idle, DropMarketConfig.DEFAULT_LINE2_COLOR));
+		assertTrue(containsColor(flashing, MarketPainter.RAID_PURPLE));
+		assertFalse(containsColor(flashing, DropMarketConfig.DEFAULT_LINE2_COLOR));
+		assertFalse(containsColor(flashing, DropMarketConfig.DEFAULT_LINE_COLOR));
 	}
 }

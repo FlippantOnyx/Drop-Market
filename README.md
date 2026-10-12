@@ -1,4 +1,4 @@
-# Drop Prediction Market
+# Prediction Market Drops
 
 A tiny, purely-for-fun overlay that turns your next big drop into a prediction-market-style odds graph. **The odds are completely made up** — this isn't tied to any real drop rates, trading, or gambling, it's just flavor for flexing on your clanmates while you grind.
 

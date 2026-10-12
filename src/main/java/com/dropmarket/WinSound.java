@@ -11,6 +11,10 @@ public enum WinSound
 	OFF("Off"),
 	COIN_TINKLE("Coin tinkle", SoundEffectID.GE_COIN_TINKLE),
 	OFFER_DING("Offer ding", SoundEffectID.GE_ADD_OFFER_DINGALING),
+	// The Grand Exchange's own sound effects in a row (offer ding, then two coin tinkles) as the nearest thing to its
+	// trade jingle, which is music and can't be played by a plugin.
+	GE_CHIME("Grand Exchange chime",
+		SoundEffectID.GE_ADD_OFFER_DINGALING, SoundEffectID.GE_COIN_TINKLE, SoundEffectID.GE_COIN_TINKLE),
 	// "sotn_muspah_unique_loot_02", the sound of a unique drop.
 	COLLECTION_LOG("Collection log", 6765),
 	// "found_gem", the gem alert chime.

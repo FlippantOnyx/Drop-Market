@@ -19,6 +19,13 @@ public class WinSoundTest
 	}
 
 	@Test
+	public void geChimeIsTheGrandExchangeSoundsInARow()
+	{
+		assertArrayEquals(new int[]{SoundEffectID.GE_ADD_OFFER_DINGALING, SoundEffectID.GE_COIN_TINKLE,
+			SoundEffectID.GE_COIN_TINKLE}, WinSound.GE_CHIME.notes());
+	}
+
+	@Test
 	public void bellRingsUpAndDownSixTimes()
 	{
 		int[] bell = WinSound.BELL_DING.notes();

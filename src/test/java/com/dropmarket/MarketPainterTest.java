@@ -36,12 +36,12 @@ public class MarketPainterTest
 		String bar2Text = "";
 		OverlayLayout layout = OverlayLayout.FULL;
 		boolean showSecondNumber;
-		boolean pinSecondNumberRight = true;
+		boolean numbersBeforeChanges;
 
 		@Override
-		public boolean pinSecondNumberRight()
+		public boolean numbersBeforeChanges()
 		{
-			return pinSecondNumberRight;
+			return numbersBeforeChanges;
 		}
 
 		@Override
@@ -351,16 +351,17 @@ public class MarketPainterTest
 			> colorPixelsAbove(off, DropMarketConfig.DEFAULT_LINE2_COLOR, 70));
 	}
 
-	private static int rightmostColorX(BufferedImage img, Color c, int maxY)
+	private static int leftmostColorX(BufferedImage img, Color c, int maxY)
 	{
-		int best = -1;
+		int best = Integer.MAX_VALUE;
 		for (int y = 0; y < Math.min(maxY, img.getHeight()); y++)
 		{
 			for (int x = 0; x < img.getWidth(); x++)
 			{
 				if ((img.getRGB(x, y) & 0xFFFFFF) == (c.getRGB() & 0xFFFFFF))
 				{
-					best = Math.max(best, x);
+					best = Math.min(best, x);
+					break;
 				}
 			}
 		}
@@ -368,20 +369,20 @@ public class MarketPainterTest
 	}
 
 	@Test
-	public void pinToggleMovesTheSecondNumberToTheRightEdge() throws Exception
+	public void bothReadoutsSitAtTheRightAndTheToggleReordersThem() throws Exception
 	{
 		MarketGraph poly = new MarketGraph(new Random(99));
 		poly.reset();
 		TestConfig config = new TestConfig();
 		config.showSecondLine = true;
 		config.showSecondNumber = true;
-		config.pinSecondNumberRight = true;
-		BufferedImage pinned = render("Zulrah drops Tanzanite fang", false, 0, 260, 192, config, poly, 0);
-		config.pinSecondNumberRight = false;
-		BufferedImage following = render("Zulrah drops Tanzanite fang", false, 0, 260, 192, config, poly, 0);
-		int edge = 260 - 6;
-		int pinnedX = rightmostColorX(pinned, DropMarketConfig.DEFAULT_LINE2_COLOR, 70);
-		assertTrue("pinned reaches the right edge: " + pinnedX, pinnedX >= edge - 6);
-		assertTrue(rightmostColorX(following, DropMarketConfig.DEFAULT_LINE2_COLOR, 70) < pinnedX);
+		BufferedImage perLine = render("Zulrah drops Tanzanite fang", false, 0, 260, 192, config, poly, 0);
+		config.numbersBeforeChanges = true;
+		BufferedImage numbersFirst = render("Zulrah drops Tanzanite fang", false, 0, 260, 192, config, poly, 0);
+		// Line 1 starts at the same place in both (the left end of the right-aligned group), but line 2's number
+		// is much closer to line 1's when the numbers come first.
+		int line2PerLine = leftmostColorX(perLine, DropMarketConfig.DEFAULT_LINE2_COLOR, 70);
+		int line2NumbersFirst = leftmostColorX(numbersFirst, DropMarketConfig.DEFAULT_LINE2_COLOR, 70);
+		assertTrue(line2PerLine > 130 && line2NumbersFirst < line2PerLine);
 	}
-}
+}

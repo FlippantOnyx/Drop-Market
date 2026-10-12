@@ -293,25 +293,11 @@ public interface DropMarketConfig extends Config
 	}
 
 	@ConfigItem(
-		keyName = "numbersBeforeChanges",
-		name = "Numbers Before Changes",
-		description = "With the second odds number on, both readouts sit at the right of the box.<br>"
-			+ "Off: line 1 number and change, then line 2 number and change.<br>"
-			+ "On: line 1 number, line 2 number, line 1 change, line 2 change, all 5 px apart.",
-		section = SECTION_LINES,
-		position = 5
-	)
-	default boolean numbersBeforeChanges()
-	{
-		return false;
-	}
-
-	@ConfigItem(
 		keyName = "line2Color",
 		name = "Line 2 Color",
 		description = "Color of the second, independent odds line",
 		section = SECTION_LINES,
-		position = 6
+		position = 5
 	)
 	default Color line2Color()
 	{
@@ -323,7 +309,7 @@ public interface DropMarketConfig extends Config
 		name = "Line 2 Falling Color",
 		description = "Color of line 2's change indicator when it drops",
 		section = SECTION_LINES,
-		position = 7
+		position = 6
 	)
 	default Color line2FallingColor()
 	{

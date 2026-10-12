@@ -36,13 +36,6 @@ public class MarketPainterTest
 		String bar2Text = "";
 		OverlayLayout layout = OverlayLayout.FULL;
 		boolean showSecondNumber;
-		boolean numbersBeforeChanges;
-
-		@Override
-		public boolean numbersBeforeChanges()
-		{
-			return numbersBeforeChanges;
-		}
 
 		@Override
 		public boolean showSecondNumber()
@@ -351,17 +344,16 @@ public class MarketPainterTest
 			> colorPixelsAbove(off, DropMarketConfig.DEFAULT_LINE2_COLOR, 70));
 	}
 
-	private static int leftmostColorX(BufferedImage img, Color c, int maxY)
+	private static int rightmostColorX(BufferedImage img, Color c, int maxY)
 	{
-		int best = Integer.MAX_VALUE;
+		int best = -1;
 		for (int y = 0; y < Math.min(maxY, img.getHeight()); y++)
 		{
 			for (int x = 0; x < img.getWidth(); x++)
 			{
 				if ((img.getRGB(x, y) & 0xFFFFFF) == (c.getRGB() & 0xFFFFFF))
 				{
-					best = Math.min(best, x);
-					break;
+					best = Math.max(best, x);
 				}
 			}
 		}
@@ -369,19 +361,15 @@ public class MarketPainterTest
 	}
 
 	@Test
-	public void bothReadoutsSitAtTheRightAndTheToggleReordersThem() throws Exception
+	public void secondReadoutSitsAtTheRightEdgeAndMainNumberAtTheLeft() throws Exception
 	{
 		MarketGraph poly = new MarketGraph(new Random(99));
 		poly.reset();
 		TestConfig config = new TestConfig();
 		config.showSecondLine = true;
 		config.showSecondNumber = true;
-		BufferedImage perLine = render("Zulrah drops Tanzanite fang", false, 0, 260, 192, config, poly, 0);
-		config.numbersBeforeChanges = true;
-		BufferedImage numbersFirst = render("Zulrah drops Tanzanite fang", false, 0, 260, 192, config, poly, 0);
-		// Line 2's number hugs the right side by default and moves next to line 1's when the numbers come first.
-		int line2PerLine = leftmostColorX(perLine, DropMarketConfig.DEFAULT_LINE2_COLOR, 70);
-		int line2NumbersFirst = leftmostColorX(numbersFirst, DropMarketConfig.DEFAULT_LINE2_COLOR, 70);
-		assertTrue(line2PerLine > 130 && line2NumbersFirst < 100);
+		BufferedImage img = render("Zulrah drops Tanzanite fang", false, 0, 260, 192, config, poly, 0);
+		int line2Right = rightmostColorX(img, DropMarketConfig.DEFAULT_LINE2_COLOR, 70);
+		assertTrue("line 2 reaches the right edge: " + line2Right, line2Right >= 260 - 12);
 	}
 }

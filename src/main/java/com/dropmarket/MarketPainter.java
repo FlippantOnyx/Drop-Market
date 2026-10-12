@@ -49,6 +49,8 @@ final class MarketPainter
 	private static final int TIGHT_GROUP_GAP = 10;
 	private static final int PAIR_GAP = 10;
 	private static final int SCROLL_GAP = 28;
+	// The drawn line only moves once the odds have changed by this many points, so it holds flat and then turns sharply.
+	private static final double RIGID_STEP = 2.5;
 	private static final int SCROLL_PX_PER_TICK = 8;
 
 	private MarketPainter()
@@ -608,13 +610,14 @@ final class MarketPainter
 			return;
 		}
 
+		double[] shown = rigid(graph);
 		Path2D.Double line = new Path2D.Double();
 		double lastX = right;
 		double lastY = bottom;
 		for (int i = 0; i < n; i++)
 		{
 			double px = left + (double) (right - left) * i / (n - 1);
-			double py = top + (bottom - top) * (1 - graph.get(i) / 100.0);
+			double py = top + (bottom - top) * (1 - shown[i] / 100.0);
 			if (i == 0)
 			{
 				line.moveTo(px, py);
@@ -644,6 +647,32 @@ final class MarketPainter
 		g.fill(new Ellipse2D.Double(lastX - haloR, lastY - haloR, haloR * 2, haloR * 2));
 		g.setColor(color);
 		g.fill(new Ellipse2D.Double(lastX - 2.5, lastY - 2.5, 5, 5));
+	}
+
+	/**
+	 * The values as drawn: the line stays put until the odds have moved RIGID_STEP points, then jumps to the new level,
+	 * which gives flat holds and sharp turns instead of a smooth curve. The newest point is always the real value, so the
+	 * dot matches the big number.
+	 */
+	static double[] rigid(MarketGraph graph)
+	{
+		int n = graph.size();
+		double[] shown = new double[n];
+		double level = n == 0 ? 0 : graph.get(0);
+		for (int i = 0; i < n; i++)
+		{
+			double v = graph.get(i);
+			if (Math.abs(v - level) >= RIGID_STEP)
+			{
+				level = v;
+			}
+			shown[i] = level;
+		}
+		if (n > 0)
+		{
+			shown[n - 1] = graph.get(n - 1);
+		}
+		return shown;
 	}
 
 	private static int yFor(int pct, int top, int bottom)

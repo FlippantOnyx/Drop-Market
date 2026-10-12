@@ -340,6 +340,33 @@ public class MarketPainterTest
 	}
 
 	@Test
+	public void drawnLineHoldsFlatAndKeepsTheRealLatestValue()
+	{
+		MarketGraph graph = new MarketGraph(new Random(3));
+		graph.reset();
+		for (int i = 0; i < 200; i++)
+		{
+			graph.step();
+		}
+		double[] shown = MarketPainter.rigid(graph);
+		assertEquals(graph.size(), shown.length);
+		assertEquals(graph.current(), shown[shown.length - 1], 0.0001);
+		int flat = 0;
+		for (int i = 1; i < shown.length - 1; i++)
+		{
+			flat += shown[i] == shown[i - 1] ? 1 : 0;
+			// Every drawn level is a real value from the graph, never an invented one.
+			boolean real = false;
+			for (int j = 0; j < graph.size(); j++)
+			{
+				real |= graph.get(j) == shown[i];
+			}
+			assertTrue(real);
+		}
+		assertTrue("flat holds " + flat, flat > 5);
+	}
+
+	@Test
 	public void bothDeltasCanBeTurnedOff() throws Exception
 	{
 		TestConfig on = new TestConfig();

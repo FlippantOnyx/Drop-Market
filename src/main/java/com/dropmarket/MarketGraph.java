@@ -19,8 +19,8 @@ class MarketGraph
 	private static final int PROFILE_EXTRA_STEPS = 5 * 60 / STEP_SECONDS;
 	private static final int TRANSITION_STEPS = 20;
 	// Each step is a straight run (sharp corners, now and then flat) plus the lively jitter the line always had.
-	private static final double JITTER = 0.6;
-	private static final double RUN_SIZE = 0.75;
+	private static final double JITTER = 0.5;
+	private static final double RUN_SIZE = 1.0;
 
 	private final Random random;
 	private final double[] points = new double[POINTS];

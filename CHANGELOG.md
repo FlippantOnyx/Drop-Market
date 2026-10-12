@@ -2,6 +2,8 @@
 
 ## 1.2.0
 
+- Abyssal Sire's market is the Unsired; at the Font of Consumption with an Unsired you get an "UNSIRED DROPS X" market valued by the rewards you can still get
+- Multi-part drops (Noxious halberd, Abyssal bludgeon) split the finished item's value across the parts you're missing and skip parts you already hold
 - Fix: a win no longer keeps flashing while you keep killing the same monster; it ends after Celebration Seconds
 - Repeat untradeable uniques (e.g. Xeric's talisman) no longer count as wins unless they are new to your log, a pet, or a part of an expensive item (icons, fangs, Mokhaiotl cloth...)
 - Untradeable drops that craft into expensive items (vestiges, Araxyte fang, Mokhaiotl cloth...) are valued at the price of what they become, so Vardorvis counts the Ultor vestige as a 110m drop. Soulreaper axe parts just count as worth celebrating

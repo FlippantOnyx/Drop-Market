@@ -127,6 +127,17 @@ for (const { output, materials } of parsed) {
 		if (material !== 'Coins' && !tradeable.has(material) && !valueOf.has(material)) valueOf.set(material, 0);
 	}
 }
+// Items that need several untradeable drops (Noxious halberd: blade + point + pommel; Abyssal bludgeon: axon + claw +
+// spine) list their sibling parts, so the plugin can split the finished item's value across what is still missing.
+const droppedItems = new Set(rows.map((row) => row.item_name));
+const partsOf = new Map();
+for (const { output, materials } of parsed) {
+	const value = valueOf.get(output);
+	if (!value || SHARED_PARTS.test(output)) continue;
+	const parts = [...new Set(materials.filter((m) => m !== 'Coins' && !tradeable.has(m) && droppedItems.has(m) && valueOf.has(m)))];
+	if (parts.length < 2) continue;
+	for (const part of parts) partsOf.set(part, parts.slice().sort());
+}
 const sourcesOf = new Map();
 for (const row of rows) {
 	if (!valueOf.has(row.item_name) || tradeable.has(row.item_name) || row.item_name === 'Coins') continue;
@@ -134,7 +145,9 @@ for (const row of rows) {
 	set.add(normalize(row.page_name));
 	sourcesOf.set(row.item_name, set);
 }
-const components = [...sourcesOf.keys()].sort().map((name) => ({ name, value: valueOf.get(name), sources: [...sourcesOf.get(name)].sort() }));
+const components = [...sourcesOf.keys()].sort().map((name) => ({
+	name, value: valueOf.get(name), sources: [...sourcesOf.get(name)].sort(), ...(partsOf.has(name) ? { parts: partsOf.get(name) } : {})
+}));
 
 writeFileSync(new URL('wiki-drops.json', OUT_DIR), JSON.stringify(drops));
 writeFileSync(new URL('collection-log.json', OUT_DIR), JSON.stringify({ items: clogItems, sources }));

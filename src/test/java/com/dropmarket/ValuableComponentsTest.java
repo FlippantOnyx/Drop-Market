@@ -64,4 +64,14 @@ public class ValuableComponentsTest
 		assertFalse(components.contains("Coins"));
 		assertFalse(components.contains(null));
 	}
+
+	@Test
+	public void multiPartItemsListTheirSiblings()
+	{
+		assertTrue(components.partsOf("Noxious pommel").containsAll(java.util.Arrays.asList("Noxious blade", "Noxious point", "Noxious pommel")));
+		assertTrue(components.partsOf("Bludgeon claw").containsAll(java.util.Arrays.asList("Bludgeon axon", "Bludgeon claw", "Bludgeon spine")));
+		// A vestige is a single part: it just takes the whole ring's value.
+		assertTrue(components.partsOf("Ultor vestige").isEmpty());
+		assertTrue(components.dropsFrom("Unsired").contains("Bludgeon spine"));
+	}
 }

@@ -31,6 +31,7 @@ class ValuableComponents
 		String name;
 		long value;
 		List<String> sources;
+		List<String> parts;
 	}
 
 	private final Gson gson;
@@ -55,6 +56,14 @@ class ValuableComponents
 		load();
 		Entry entry = item == null ? null : byName.get(DropTables.normalize(item));
 		return entry == null ? 0 : entry.value;
+	}
+
+	/** The other untradeable drops needed for the same finished item (a Noxious blade's siblings), or empty. */
+	synchronized List<String> partsOf(String item)
+	{
+		load();
+		Entry entry = item == null ? null : byName.get(DropTables.normalize(item));
+		return entry == null || entry.parts == null ? Collections.emptyList() : entry.parts;
 	}
 
 	/** The listed items that drop from this source, e.g. the Ultor vestige for Vardorvis. */

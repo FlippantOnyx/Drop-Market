@@ -150,6 +150,18 @@ Don't be that. Rules for anything we run (tools, workflows, and any ad-hoc fetch
    `gh`. Check the PR's build once it has had time to run (the bot comments on non-commit changes; that is normal for
    a `repository=` change). Updates have typically merged in hours to a day or two.
 
+## Multi-part items and the Font of Consumption
+
+- Items that need several untradeable drops (Noxious halberd: blade, point, pommel; Abyssal bludgeon: axon, claw, spine)
+  list their `parts` in `valuable-components.json`. Each part is valued at the finished item's price divided by how
+  many parts you still need, and a part you already hold is removed from the market pick, because the game won't drop
+  duplicates until you have the full set (`OwnedParts`, saved per account by `MultipartTracker`; learned from loot and
+  from the inventory/bank; completing a set starts it over).
+- Abyssal Sire's market is just the Unsired (every Sire unique comes from it). Standing near the Font of Consumption
+  (scenery id 27029) with an Unsired in the inventory opens an "UNSIRED DROPS X" market, picking among the Unsired's
+  rewards by value (bludgeon pieces you don't have, whip, dagger, jar, head, and the orphan unless you own it). The
+  offering is spotted by the Unsired leaving the inventory; this part has not been verified in-game.
+
 ## Wins, in one paragraph (so you don't re-derive it)
 
 A drop is a win via `DropQualifier`: **blacklist** never wins and **priority** always wins; otherwise Pop Off wins

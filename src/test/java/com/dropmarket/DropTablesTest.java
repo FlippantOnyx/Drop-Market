@@ -157,4 +157,13 @@ public class DropTablesTest
 		assertEquals("Tumeken's shadow", DropTables.displayName("Tumeken's shadow (uncharged)"));
 		assertEquals("Twisted bow", DropTables.displayName("Twisted bow"));
 	}
+
+	@Test
+	public void theSireOnlyHasTheUnsiredAndTheUnsiredHasItsRewards()
+	{
+		assertEquals(java.util.Arrays.asList("Unsired"), DropTables.lookup("Abyssal Sire"));
+		assertTrue(DropTables.lookup("Unsired").containsAll(java.util.Arrays.asList("Bludgeon claw", "Bludgeon spine",
+			"Bludgeon axon", "Abyssal dagger", "Abyssal whip", "Jar of miasma", "Abyssal head", "Abyssal orphan")));
+		assertTrue(DropTables.isAlwaysCelebrated("Unsired"));
+	}
 }

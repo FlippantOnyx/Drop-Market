@@ -22,6 +22,7 @@ final class DropTables
 	static final String GUARDIANS_OF_THE_RIFT = "Guardians of the Rift";
 	static final String HERBIBOAR = "Herbiboar";
 	static final String TREASURE_TRAILS = "Treasure Trails";
+	static final String UNSIRED = "Unsired";
 
 	// Raids only pay out their unique drops from the reward chest at the very end, so room/sub-boss kills
 	// (aliased to the raid name for market display) shouldn't bump the raid's completion count.
@@ -92,7 +93,11 @@ final class DropTables
 		table("Thermonuclear smoke devil", "Occult necklace", "Smoke battlestaff", "Dragon chainbody",
 			"Jar of smoke", "Pet smoke devil");
 		alias("Thermonuclear smoke devil", "thermy");
-		table("Abyssal Sire", "Unsired", "Abyssal orphan", "Jar of miasma", "Abyssal head");
+		// Every Sire unique comes out of the Unsired, so the Sire itself only has the Unsired to chase; what the Unsired turns
+		// into is its own table, shown at the Font of Consumption.
+		table("Abyssal Sire", "Unsired");
+		table(UNSIRED, "Bludgeon claw", "Bludgeon spine", "Bludgeon axon", "Abyssal dagger", "Abyssal whip", "Jar of miasma",
+			"Abyssal head", "Abyssal orphan");
 		table("Grotesque Guardians", "Black tourmaline core", "Granite maul", "Granite gloves", "Granite ring",
 			"Granite hammer", "Jar of stone", "Noon");
 		alias("Grotesque Guardians", "dusk", "dawn", "grotesque guardians");
@@ -293,6 +298,12 @@ final class DropTables
 		{
 			TABLES.computeIfAbsent(normalize(source), k -> new ArrayList<>()).add(item);
 		}
+	}
+
+	/** Drops that are always worth celebrating on their own (everything the Sire has comes from the Unsired). */
+	static boolean isAlwaysCelebrated(String item)
+	{
+		return normalize(item).equals("unsired");
 	}
 
 	/** Clue scrolls and their containers never count as collection log chases. */

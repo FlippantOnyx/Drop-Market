@@ -27,9 +27,13 @@ import net.runelite.api.NPC;
 import net.runelite.api.NPCComposition;
 import net.runelite.api.Player;
 import net.runelite.api.Skill;
+import net.runelite.api.GameObject;
+import net.runelite.api.ItemContainer;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.ChatMessage;
+import net.runelite.api.events.GameObjectDespawned;
+import net.runelite.api.events.GameObjectSpawned;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.HitsplatApplied;
@@ -38,6 +42,7 @@ import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.events.StatChanged;
 import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.gameval.InventoryID;
+import net.runelite.api.gameval.ItemID;
 import net.runelite.api.gameval.VarbitID;
 import net.runelite.api.widgets.Widget;
 import net.runelite.client.callback.ClientThread;
@@ -147,6 +152,9 @@ public class DropMarketPlugin extends Plugin
 	private ValuableComponents valuableComponents;
 
 	@Inject
+	private MultipartTracker multipart;
+
+	@Inject
 	private CollectionLogTracker clog;
 
 	@Getter
@@ -215,6 +223,9 @@ public class DropMarketPlugin extends Plugin
 	private int lastLootTick;
 	// A collection log / valuable drop celebration whose source isn't known yet, shown as "[PLAYER] GETS [ITEM]".
 	private boolean personalOverride;
+	// The Font of Consumption, once its scenery has loaded, and the inventory last seen at it (for spotting an offering).
+	private WorldPoint fontPoint;
+	private final Map<Integer, Integer> lastInventory = new HashMap<>();
 
 	@Override
 	protected void startUp()
@@ -460,6 +471,11 @@ public class DropMarketPlugin extends Plugin
 	@Subscribe
 	public void onGameStateChanged(GameStateChanged event)
 	{
+		if (event.getGameState() == GameState.LOADING)
+		{
+			// Scenery respawns after a load, so the font is rediscovered.
+			fontPoint = null;
+		}
 		if (event.getGameState() == GameState.LOGIN_SCREEN)
 		{
 			lastXp.clear();
@@ -475,6 +491,7 @@ public class DropMarketPlugin extends Plugin
 	public void onRuneScapeProfileChanged(RuneScapeProfileChanged event)
 	{
 		clog.load();
+		multipart.load();
 		runeProfileFetchedFor = null;
 		repickMarket();
 	}
@@ -482,10 +499,12 @@ public class DropMarketPlugin extends Plugin
 	@Subscribe
 	public void onItemContainerChanged(ItemContainerChanged event)
 	{
+		rememberParts(event);
 		if (event.getContainerId() != InventoryID.INV)
 		{
 			return;
 		}
+		spotOffering(event.getItemContainer());
 		Set<Integer> ids = new HashSet<>();
 		for (Item item : event.getItemContainer().getItems())
 		{
@@ -797,6 +816,129 @@ public class DropMarketPlugin extends Plugin
 		}
 	}
 
+	// The Font of Consumption's scenery id (OSRS Wiki). Standing within this many tiles of it counts as "at the font".
+	private static final int FONT_OBJECT_ID = 27029;
+	private static final int FONT_RANGE = 8;
+
+	@Subscribe
+	public void onGameObjectSpawned(GameObjectSpawned event)
+	{
+		GameObject object = event.getGameObject();
+		if (object.getId() == FONT_OBJECT_ID)
+		{
+			fontPoint = object.getWorldLocation();
+		}
+	}
+
+	@Subscribe
+	public void onGameObjectDespawned(GameObjectDespawned event)
+	{
+		GameObject object = event.getGameObject();
+		if (object.getId() == FONT_OBJECT_ID && object.getWorldLocation().equals(fontPoint))
+		{
+			fontPoint = null;
+		}
+	}
+
+	private boolean nearFont()
+	{
+		Player player = client.getLocalPlayer();
+		if (fontPoint == null || player == null)
+		{
+			return false;
+		}
+		WorldPoint here = player.getWorldLocation();
+		return here.getPlane() == fontPoint.getPlane() && here.distanceTo(fontPoint) <= FONT_RANGE;
+	}
+
+	/** Standing at the Font of Consumption with an Unsired in the inventory, about to offer it. */
+	private boolean atFontWithUnsired()
+	{
+		if (!nearFont())
+		{
+			return false;
+		}
+		ItemContainer inventory = client.getItemContainer(InventoryID.INV);
+		return inventory != null && inventory.contains(ItemID.ABYSSALSIRE_UNSIRED);
+	}
+
+	/**
+	 * Notes which parts of multi-part items (Noxious halberd, Abyssal bludgeon) sit in the inventory or bank, since the
+	 * game won't drop a part you hold. A container holding the whole set is skipped: that set is about to be crafted.
+	 */
+	private void rememberParts(ItemContainerChanged event)
+	{
+		int container = event.getContainerId();
+		if (container != InventoryID.INV && container != InventoryID.BANK)
+		{
+			return;
+		}
+		Set<String> held = new HashSet<>();
+		List<String> names = new ArrayList<>();
+		for (Item item : event.getItemContainer().getItems())
+		{
+			if (item.getId() <= 0)
+			{
+				continue;
+			}
+			String name = itemManager.getItemComposition(item.getId()).getName();
+			if (!valuableComponents.partsOf(name).isEmpty())
+			{
+				held.add(DropTables.normalize(name));
+				names.add(name);
+			}
+		}
+		for (String name : names)
+		{
+			List<String> set = valuableComponents.partsOf(name);
+			boolean wholeSet = true;
+			for (String part : set)
+			{
+				wholeSet &= held.contains(DropTables.normalize(part));
+			}
+			if (!wholeSet)
+			{
+				multipart.add(name, set);
+			}
+		}
+	}
+
+	/**
+	 * Spots an Unsired being offered at the Font (it leaves the inventory while something new arrives) and treats what
+	 * came back as the loot, in case no loot event carries it.
+	 */
+	private void spotOffering(ItemContainer inventory)
+	{
+		Map<Integer, Integer> now = new HashMap<>();
+		for (Item item : inventory.getItems())
+		{
+			if (item.getId() > 0)
+			{
+				now.merge(item.getId(), item.getQuantity(), Integer::sum);
+			}
+		}
+		boolean unsiredGone = lastInventory.getOrDefault(ItemID.ABYSSALSIRE_UNSIRED, 0)
+			> now.getOrDefault(ItemID.ABYSSALSIRE_UNSIRED, 0);
+		if (unsiredGone && nearFont())
+		{
+			List<ItemStack> gained = new ArrayList<>();
+			for (Map.Entry<Integer, Integer> entry : now.entrySet())
+			{
+				int extra = entry.getValue() - lastInventory.getOrDefault(entry.getKey(), 0);
+				if (extra > 0 && entry.getKey() != ItemID.ABYSSALSIRE_UNSIRED)
+				{
+					gained.add(new ItemStack(entry.getKey(), extra));
+				}
+			}
+			if (!gained.isEmpty())
+			{
+				checkLoot(gained);
+			}
+		}
+		lastInventory.clear();
+		lastInventory.putAll(now);
+	}
+
 	private String activitySource()
 	{
 		if (client.getVarbitValue(VarbitID.RAIDS_CLIENT_INDUNGEON) == 1)
@@ -811,6 +953,10 @@ public class DropMarketPlugin extends Plugin
 		if (client.getVarbitValue(VarbitID.PLAYER_IN_GAUNTLET) == 1)
 		{
 			return corruptedGauntlet ? DropTables.CORRUPTED_GAUNTLET : DropTables.THE_GAUNTLET;
+		}
+		if (atFontWithUnsired())
+		{
+			return DropTables.UNSIRED;
 		}
 
 		Player player = client.getLocalPlayer();
@@ -963,6 +1109,13 @@ public class DropMarketPlugin extends Plugin
 	{
 		List<String> table = new ArrayList<>(fullTable);
 		table.removeIf(item -> isBlacklisted(source, fullTable, item));
+		if (DropTables.UNSIRED.equals(source) && clog.isObtained("Abyssal orphan"))
+		{
+			// The font never gives the orphan to someone who already has it.
+			table.removeIf(item -> DropTables.normalize(item).equals("abyssal orphan"));
+		}
+		// A part of a multi-part item you already hold can't drop (the game gives the missing ones first).
+		table.removeIf(item -> !valuableComponents.partsOf(item).isEmpty() && multipart.owns(item));
 		// Untradeable drops that become something expensive (the Ultor vestige from Vardorvis) are valued by what they become.
 		for (String component : valuableComponents.dropsFrom(source))
 		{
@@ -970,6 +1123,10 @@ public class DropMarketPlugin extends Plugin
 			{
 				table.add(component);
 			}
+		}
+		if ("Abyssal Sire".equals(source) && tableContains(table, "Unsired"))
+		{
+			return "Unsired";
 		}
 		String picked = MarketPicker.pick(table, DropTables.isPetFirst(source), config.marketMinimumValue(),
 			this::priceOf, item -> isLockedSlot(item, fromWiki));
@@ -1007,7 +1164,7 @@ public class DropMarketPlugin extends Plugin
 	/** An untradeable that is still worth celebrating: a pet, or a drop that is a part of an expensive item (vestiges, fangs, cloth...). */
 	private boolean keepsValue(String item)
 	{
-		return DropTables.isPet(item) || valuableComponents.contains(item);
+		return DropTables.isPet(item) || DropTables.isAlwaysCelebrated(item) || valuableComponents.contains(item);
 	}
 
 	private boolean pricesLoaded()
@@ -1016,7 +1173,30 @@ public class DropMarketPlugin extends Plugin
 	}
 
 	/** GE price, {@link DropQualifier#NO_PRICE} if it has none, or {@link DropQualifier#PRICES_NOT_LOADED}. */
+	/** GE price, or what an untradeable drop is worth through what it becomes (split across the parts still missing). */
 	private long priceOf(String name)
+	{
+		long price = gePriceOf(name);
+		if (price == DropQualifier.NO_PRICE)
+		{
+			long derived = partAwareValue(name);
+			if (derived > 0)
+			{
+				return derived;
+			}
+		}
+		return price;
+	}
+
+	/** The finished item's value, divided across the parts of it you still need (a part you hold can't drop again). */
+	private long partAwareValue(String name)
+	{
+		long full = valuableComponents.valueOf(name);
+		List<String> parts = valuableComponents.partsOf(name);
+		return parts.isEmpty() ? full : full / multipart.missing(parts);
+	}
+
+	private long gePriceOf(String name)
 	{
 		String key = name.toLowerCase();
 		Long cached = priceCache.get(key);
@@ -1040,15 +1220,6 @@ public class DropMarketPlugin extends Plugin
 					price = DropQualifier.NOT_PRICED_YET;
 				}
 				break;
-			}
-		}
-		if (price == DropQualifier.NO_PRICE)
-		{
-			// No GE price of its own: worth what it ends up as once crafted (0 if it has no assigned value).
-			long derived = valuableComponents.valueOf(name);
-			if (derived > 0)
-			{
-				price = derived;
 			}
 		}
 		priceCache.put(key, price);
@@ -1088,6 +1259,12 @@ public class DropMarketPlugin extends Plugin
 			boolean newLogItem = DropQualifier.isNewLogItem(logDrop, clog.hasFullLog(), clog.isObtained(name));
 			boolean qualifies = DropQualifier.lootQualifies(price, config.winMinimumValue(), onTable, isTarget,
 				slot, newLogItem, keepsValue(name), listStatus(marketSource, table, name), popOff);
+			// A part of a multi-part item: remember we hold it now (valued above, before it counted as owned).
+			List<String> setParts = valuableComponents.partsOf(name);
+			if (!setParts.isEmpty())
+			{
+				multipart.add(name, setParts);
+			}
 			// A table/target item with no market value is a collection log chase we haven't seen yet: learn it.
 			if (slot || logDrop || ((isTarget || onTable) && (price == DropQualifier.NO_PRICE || price == DropQualifier.NOT_PRICED_YET)))
 			{

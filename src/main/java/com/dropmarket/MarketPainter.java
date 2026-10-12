@@ -44,7 +44,6 @@ final class MarketPainter
 	private static final int CHANGE_GAP = 7;
 	private static final int GROUP_GAP = 14;
 	private static final int PAIR_GAP = 10;
-	private static final int TIGHT_GAP = 5;
 	private static final int SCROLL_GAP = 28;
 	private static final int SCROLL_PX_PER_TICK = 8;
 
@@ -257,7 +256,7 @@ final class MarketPainter
 		g.setFont(bigFont);
 		String pct2 = secondLine == null ? null : Math.round(secondLine.current()) + "%";
 		// The numbers sit 2px lower than the row they were laid out on; the sparkline keeps its place.
-		int dx = drawOdds(g, PAD, pctBaseline + 2, w - PAD - 24, false, bigFont, smallFont, accent, accent2, pctText, pct2, delta1,
+		int dx = drawOdds(g, PAD, pctBaseline + 3, w - PAD - 24, false, bigFont, smallFont, accent, accent2, pctText, pct2, delta1,
 			delta2, config);
 
 		int sparkLeft = dx + 12;
@@ -415,8 +414,7 @@ final class MarketPainter
 	/**
 	 * Draws line 1's big number and change on the left, then line 2. With the second number on, line 2's number and
 	 * change sit at the right edge of the box (Full) or follow line 1's (Compact, which keeps the right for its
-	 * sparkline). With numbersBeforeChanges everything runs left to right as "number number change change", five
-	 * pixels apart. Without the second number, line 2's change just follows line 1's. Returns where the row ended.
+	 * sparkline). Without the second number, line 2's change just follows line 1's. Returns where the row ended.
 	 */
 	private static int drawOdds(Graphics2D g, int startX, int baseline, int limit, boolean full, Font bigFont,
 		Font smallFont, Color accent, Color accent2, String pct1, String pct2, int delta1, int delta2,
@@ -428,13 +426,10 @@ final class MarketPainter
 		int d2W = pct2 == null ? 0 : deltaWidth(g, delta2, smallFont);
 		int pct2W = pct2 == null ? 0 : bigFm.stringWidth(pct2);
 		boolean number = pct2 != null && config.showSecondNumber();
-		boolean numbersFirst = config.numbersBeforeChanges();
 		int needed = 0;
 		if (number)
 		{
-			needed = numbersFirst
-				? pct1W + TIGHT_GAP + pct2W + TIGHT_GAP + d1W + TIGHT_GAP + d2W
-				: pct1W + CHANGE_GAP + d1W + GROUP_GAP + pct2W + CHANGE_GAP + d2W;
+			needed = pct1W + CHANGE_GAP + d1W + GROUP_GAP + pct2W + CHANGE_GAP + d2W;
 			number = startX + needed <= limit;
 		}
 
@@ -443,16 +438,7 @@ final class MarketPainter
 			int x = startX;
 			g.setFont(bigFont);
 			text(g, pct1, x, baseline, accent);
-			x += pct1W;
-			if (numbersFirst)
-			{
-				x += TIGHT_GAP;
-				text(g, pct2, x, baseline, accent2);
-				x += pct2W + TIGHT_GAP;
-				x += drawDelta(g, x, baseline, delta1, accent, config.line1FallingColor(), smallFont) + TIGHT_GAP;
-				return x + drawDelta(g, x, baseline, delta2, accent2, config.line2FallingColor(), smallFont);
-			}
-			x += CHANGE_GAP;
+			x += pct1W + CHANGE_GAP;
 			x += drawDelta(g, x, baseline, delta1, accent, config.line1FallingColor(), smallFont);
 			// Line 2's readout hugs the right edge in Full; Compact keeps that side for its sparkline.
 			x = full ? limit - (pct2W + CHANGE_GAP + d2W) : x + GROUP_GAP;

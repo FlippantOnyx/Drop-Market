@@ -256,26 +256,19 @@ final class MarketPainter
 		g.fill(new Ellipse2D.Double(x, baseline - titleFm.getAscent() / 2.0 - dotR - 1, dotR * 2, dotR * 2));
 		x += dotR * 2 + 5;
 
-		int right = w - PAD;
 		if (badge != null && !badge.isEmpty())
 		{
 			g.setFont(smallFont);
-			right -= smallFm.stringWidth(badge);
-			text(g, badge, right, baseline, MUTED);
-			right -= 6;
+			text(g, badge, w - PAD - smallFm.stringWidth(badge), baseline, MUTED);
 		}
+		// The title takes a second line if it has to, so the card is taller for long titles (see compactExtraHeight).
+		List<String> titleRows = compactTitleLines(title, badge, w, titleFm, smallFm);
 		g.setFont(titleFont);
-		String fitted = compactTitle(title, titleFm::stringWidth, right - x);
-		if (fitted != null)
+		for (int row = 0; row < titleRows.size(); row++)
 		{
-			text(g, fitted, x, baseline, TITLE);
+			text(g, titleRows.get(row), x, baseline + row * titleFm.getHeight(), TITLE);
 		}
-		else
-		{
-			// Nothing short enough fits whole, so the full title scrolls instead of being cut off.
-			scrollText(g, abbreviatedTitle(title), titleFm, x, right, baseline, nowTick);
-		}
-		y += titleFm.getHeight() + 2;
+		y += titleFm.getHeight() * titleRows.size() + 2;
 
 		int pctBaseline = y + bigFm.getAscent();
 		String pctText = Math.round(graph.current()) + "%";
@@ -373,30 +366,63 @@ final class MarketPainter
 		}
 	}
 
+	/** The room the Compact title has: from after the live dot to before the badge. */
+	static List<String> compactTitleLines(String title, String badge, int w, FontMetrics titleFm, FontMetrics smallFm)
+	{
+		int left = PAD + 3 * 2 + 5;
+		int right = w - PAD;
+		int firstRight = right;
+		if (badge != null && !badge.isEmpty())
+		{
+			firstRight -= smallFm.stringWidth(badge) + 6;
+		}
+		// The badge only sits on the first row, so the second row can run the full width.
+		return compactLines(title, titleFm::stringWidth, firstRight - left, right - left);
+	}
+
+	/** How much taller than a one-line title the Compact card must be for this title. */
+	static int compactExtraHeight(String title, String badge, int w, FontMetrics titleFm, FontMetrics smallFm)
+	{
+		return (compactTitleLines(title, badge, w, titleFm, smallFm).size() - 1) * titleFm.getHeight();
+	}
+
 	/**
-	 * The longest form of the title that fits whole in maxWidth: "THEATRE OF BLOOD DROPS SCYTHE OF VITUR" becomes
-	 * "TOB DROPS SCYTHE OF VITUR" (the wiki short name), then "DROPS SCYTHE OF VITUR". It never cuts the item short:
-	 * if neither fits it returns null and the caller scrolls the title instead.
+	 * The Compact title as one or two lines. The whole title goes on one line if it fits, else on two. Only if it would
+	 * need a third line are the wiki short names used: the source first (Theatre of Blood becomes ToB), then the item
+	 * too (Osmumten's fang becomes fang). If even that doesn't fit, it is cut with an ellipsis rather than scrolled.
 	 */
-	static String compactTitle(String title, ToIntFunction<String> width, int maxWidth)
+	static List<String> compactLines(String title, ToIntFunction<String> width, int firstMax, int restMax)
+	{
+		String upper = title.toUpperCase();
+		for (String candidate : new String[]{upper, shortTitle(title, false), shortTitle(title, true)})
+		{
+			List<String> lines = wrap(candidate, width, firstMax, restMax, Integer.MAX_VALUE);
+			boolean fits = lines.size() <= 2;
+			for (int i = 0; i < lines.size(); i++)
+			{
+				fits &= width.applyAsInt(lines.get(i)) <= (i == 0 ? firstMax : restMax);
+			}
+			if (fits)
+			{
+				return lines;
+			}
+		}
+		return wrap(shortTitle(title, true), width, firstMax, restMax, 2);
+	}
+
+	/** The title with the source's wiki short name and, if asked, the item's short name. Upper-cased. */
+	static String shortTitle(String title, boolean shortItem)
 	{
 		String upper = title.toUpperCase();
 		String verb = upper.contains(" DROPS ") ? " DROPS " : upper.contains(" GETS ") ? " GETS " : null;
 		if (verb == null)
 		{
-			return width.applyAsInt(upper) <= maxWidth ? upper : null;
+			return upper;
 		}
 		int at = upper.indexOf(verb);
-		String item = upper.substring(at + verb.length());
-		String source = DropTables.abbreviation(title.substring(0, at)).toUpperCase();
-		for (String candidate : new String[]{source + verb + item, verb.trim() + " " + item})
-		{
-			if (width.applyAsInt(candidate) <= maxWidth)
-			{
-				return candidate;
-			}
-		}
-		return null;
+		String item = title.substring(at + verb.length());
+		return (DropTables.abbreviation(title.substring(0, at)) + verb.toLowerCase()
+			+ (shortItem ? DropTables.itemAbbreviation(item) : item)).toUpperCase();
 	}
 
 	/**
@@ -721,13 +747,25 @@ final class MarketPainter
 
 	static List<String> wrap(String text, FontMetrics fm, int maxWidth, int maxLines)
 	{
+		return wrap(text, fm::stringWidth, maxWidth, maxLines);
+	}
+
+	static List<String> wrap(String text, ToIntFunction<String> width, int maxWidth, int maxLines)
+	{
+		return wrap(text, width, maxWidth, maxWidth, maxLines);
+	}
+
+	/** Wraps into lines where the first may be narrower than the rest (room left for a badge beside it). */
+	static List<String> wrap(String text, ToIntFunction<String> width, int firstMax, int restMax, int maxLines)
+	{
 		List<String> lines = new ArrayList<>();
 		StringBuilder current = new StringBuilder();
 		String[] words = text.split(" ");
 		for (int i = 0; i < words.length; i++)
 		{
 			String candidate = current.length() == 0 ? words[i] : current + " " + words[i];
-			if (fm.stringWidth(candidate) <= maxWidth || current.length() == 0)
+			int maxWidth = lines.isEmpty() ? firstMax : restMax;
+			if (width.applyAsInt(candidate) <= maxWidth || current.length() == 0)
 			{
 				current.setLength(0);
 				current.append(candidate);
@@ -735,7 +773,7 @@ final class MarketPainter
 			}
 			if (lines.size() == maxLines - 1)
 			{
-				lines.add(ellipsize(candidate, fm, maxWidth));
+				lines.add(ellipsize(candidate, width, maxWidth));
 				return lines;
 			}
 			lines.add(current.toString());
@@ -744,19 +782,20 @@ final class MarketPainter
 		}
 		if (current.length() > 0)
 		{
-			lines.add(lines.size() == maxLines - 1 ? ellipsize(current.toString(), fm, maxWidth) : current.toString());
+			lines.add(lines.size() == maxLines - 1
+				? ellipsize(current.toString(), width, lines.isEmpty() ? firstMax : restMax) : current.toString());
 		}
 		return lines;
 	}
 
-	private static String ellipsize(String s, FontMetrics fm, int maxWidth)
+	private static String ellipsize(String s, ToIntFunction<String> width, int maxWidth)
 	{
-		if (fm.stringWidth(s) <= maxWidth)
+		if (width.applyAsInt(s) <= maxWidth)
 		{
 			return s;
 		}
 		String out = s;
-		while (out.length() > 1 && fm.stringWidth(out + "...") > maxWidth)
+		while (out.length() > 1 && width.applyAsInt(out + "...") > maxWidth)
 		{
 			out = out.substring(0, out.length() - 1);
 		}

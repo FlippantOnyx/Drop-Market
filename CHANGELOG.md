@@ -3,7 +3,7 @@
 ## 1.3.0
 
 - The odds lines are drawn rigid like a real market chart: flat holds, straight runs, sharp corners and sudden jumps instead of a smooth wiggle
-- Long titles never get cut off: in Compact and Full a title that doesn't fit scrolls like the ticker (Full still wraps to two lines first), instead of "DROPS DRAGON"
+- Long titles never get cut off: Compact puts a title that doesn't fit on a second line (the card grows to hold it), and only if it would need a third uses the wiki short names (ToB, ToA, CoX, and items like fang, shadow, Tbow); Full wraps to two lines and scrolls only as a last resort
 - Compact with the second odds number shrinks the numbers like the ticker does, so the sparkline is visible again
 - New "Show Both Delta Numbers" toggle (Graph Line 2); off shows only line 1's change
 - Full card: the change indicators sit 1px higher

@@ -278,39 +278,70 @@ public class MarketPainterTest
 	}
 
 	@Test
-	public void compactTitleUsesWikiAbbreviationsThenDropsTheSource()
+	public void compactTitleFitsOnOneLineThenTwoThenUsesShortNames()
 	{
 		// One unit per character keeps the widths easy to reason about.
 		java.util.function.ToIntFunction<String> chars = String::length;
-		String full = "Theatre of Blood drops Scythe of vitur";
-		assertEquals("TOB DROPS SCYTHE OF VITUR", MarketPainter.compactTitle(full, chars, 40));
-		assertEquals("DROPS SCYTHE OF VITUR", MarketPainter.compactTitle(full, chars, 24));
-		// Never cut the item short: when nothing fits whole the caller scrolls the title.
-		assertNull(MarketPainter.compactTitle(full, chars, 14));
-		assertEquals("TOB DROPS TWISTED BOW",
-			MarketPainter.compactTitle("Chambers of Xeric drops Twisted bow", chars, 40).replace("COX", "TOB"));
-		assertEquals("COX DROPS TWISTED BOW", MarketPainter.compactTitle("Chambers of Xeric drops Twisted bow", chars, 40));
-		assertEquals("ZULRAH DROPS TANZANITE FANG", MarketPainter.compactTitle("Zulrah drops Tanzanite fang", chars, 40));
-		assertEquals("KBD DROPS DRAGON PICKAXE", MarketPainter.compactTitle("King Black Dragon drops Dragon pickaxe", chars, 40));
-		assertEquals("LIVE ODDS", MarketPainter.compactTitle("LIVE ODDS", chars, 40));
-		assertNull(MarketPainter.compactTitle("Bob GETS Scythe of vitur", chars, 12));
-		assertEquals("DROPS DRAGON WARHAMMER",
-			MarketPainter.compactTitle("Lizardman shaman drops Dragon warhammer", chars, 22));
-		assertNull(MarketPainter.compactTitle("Lizardman shaman drops Dragon warhammer", chars, 21));
+		String shaman = "Lizardman shaman drops Dragon warhammer";
+		// Fits whole on one line: nothing is shortened.
+		assertEquals(java.util.Arrays.asList("LIZARDMAN SHAMAN DROPS DRAGON WARHAMMER"),
+			MarketPainter.compactLines(shaman, chars, 40, 40));
+		// Doesn't fit on one line, so it takes a second: still nothing shortened.
+		assertEquals(java.util.Arrays.asList("LIZARDMAN SHAMAN DROPS", "DRAGON WARHAMMER"),
+			MarketPainter.compactLines(shaman, chars, 25, 25));
+		assertEquals(java.util.Arrays.asList("ZULRAH DROPS TANZANITE FANG"),
+			MarketPainter.compactLines("Zulrah drops Tanzanite fang", chars, 40, 40));
+		assertEquals(java.util.Arrays.asList("LIVE ODDS"), MarketPainter.compactLines("LIVE ODDS", chars, 40, 40));
+		// The first line can be narrower (a badge sits beside it) while the second runs full width.
+		assertEquals(java.util.Arrays.asList("LIZARDMAN SHAMAN", "DROPS DRAGON WARHAMMER"),
+			MarketPainter.compactLines(shaman, chars, 17, 23));
+		// A third line would be needed, so the raid's short name is used, keeping the item whole.
+		assertEquals(java.util.Arrays.asList("TOB DROPS SCYTHE OF", "VITUR"),
+			MarketPainter.compactLines("Theatre of Blood drops Scythe of vitur", chars, 19, 19));
+		// Still too long, so the item gets its nickname too.
+		assertEquals(java.util.Arrays.asList("TOB DROPS", "SCYTHE"),
+			MarketPainter.compactLines("Theatre of Blood drops Scythe of vitur", chars, 14, 14));
+		assertEquals(java.util.Arrays.asList("TOA DROPS", "FANG"),
+			MarketPainter.compactLines("Tombs of Amascut drops Osmumten's fang", chars, 12, 12));
+		assertEquals(java.util.Arrays.asList("TOA DROPS", "SHADOW"),
+			MarketPainter.compactLines("Tombs of Amascut drops Tumeken's shadow", chars, 12, 12));
+		// Never more than two lines, and never a scroll: whatever can't fit is cut with an ellipsis.
+		java.util.List<String> cut = MarketPainter.compactLines("Bob GETS Scythe of vitur", chars, 6, 6);
+		assertEquals(2, cut.size());
+		assertTrue(cut.get(1).endsWith("..."));
 	}
 
 	@Test
-	public void compactTitleScrollsInsteadOfCuttingTheItemShort() throws Exception
+	public void itemShortNames()
+	{
+		assertEquals("fang", DropTables.itemAbbreviation("Osmumten's fang"));
+		assertEquals("shadow", DropTables.itemAbbreviation("Tumeken's shadow"));
+		assertEquals("ward", DropTables.itemAbbreviation("Elidinis' ward"));
+		assertEquals("Tbow", DropTables.itemAbbreviation("Twisted bow"));
+		assertEquals("Scythe", DropTables.itemAbbreviation("Scythe of vitur"));
+		assertEquals("DWH", DropTables.itemAbbreviation("Dragon warhammer"));
+		// No nickname and no owner: left alone.
+		assertEquals("Abyssal whip", DropTables.itemAbbreviation("Abyssal whip"));
+		assertEquals("Coins", DropTables.itemAbbreviation("Coins"));
+	}
+
+	@Test
+	public void compactCardGrowsForASecondTitleLine() throws Exception
 	{
 		TestConfig config = new TestConfig();
 		config.layout = OverlayLayout.COMPACT;
-		int h = MarketPainter.layoutHeight(config);
-		String title = "Lizardman shaman drops Dragon warhammer";
-		// 140px is too narrow for "DROPS DRAGON WARHAMMER" next to the badge, so it scrolls tick to tick.
-		BufferedImage first = render(title, false, 0, 140, h, config, null, 0);
-		BufferedImage later = render(title, false, 3, 140, h, config, null, 0);
-		assertTrue(differs(first, later));
-		assertEquals("LIZARDMAN SHAMAN DROPS DRAGON WARHAMMER", MarketPainter.abbreviatedTitle(title));
+		java.awt.Canvas canvas = new java.awt.Canvas();
+		java.awt.FontMetrics titleFm = canvas.getFontMetrics(FontManager.getRunescapeBoldFont());
+		java.awt.FontMetrics smallFm = canvas.getFontMetrics(FontManager.getRunescapeSmallFont());
+		assertEquals(0, MarketPainter.compactExtraHeight("Zulrah drops Tanzanite fang", "3 KC", 260, titleFm, smallFm));
+		int extra = MarketPainter.compactExtraHeight("Lizardman shaman drops Dragon warhammer", "17 KC", 200, titleFm, smallFm);
+		assertEquals(titleFm.getHeight(), extra);
+		int h = MarketPainter.layoutHeight(config) + extra;
+		BufferedImage img = render("Lizardman shaman drops Dragon warhammer", false, 0, 200, h, config, null, 0);
+		save(img, "compact-two-line-title");
+		// Both rows of text were drawn: there is light text pixels in the second title row's band.
+		assertTrue(containsColor(img.getSubimage(10, 6 + titleFm.getHeight(), 150, titleFm.getHeight()),
+			new Color(235, 237, 240)));
 	}
 
 	@Test

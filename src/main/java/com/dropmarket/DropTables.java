@@ -402,6 +402,66 @@ final class DropTables
 		}
 	}
 
+	/** What players call common uniques, for when a compact title would otherwise need a third line. */
+	private static final Map<String, String> ITEM_ABBREVIATIONS = new HashMap<>();
+
+	static
+	{
+		String[][] pairs = {
+			{"Twisted bow", "Tbow"}, {"Dragon hunter crossbow", "DHCB"}, {"Dragon hunter lance", "Lance"},
+			{"Dragon claws", "Claws"}, {"Elder maul", "Maul"}, {"Kodai insignia", "Kodai"},
+			{"Dexterous prayer scroll", "Dex"}, {"Arcane prayer scroll", "Arcane"}, {"Twisted buckler", "Buckler"},
+			{"Ancestral robe top", "Robe top"}, {"Ancestral robe bottom", "Robe bottom"},
+			{"Scythe of vitur", "Scythe"}, {"Ghrazi rapier", "Rapier"}, {"Sanguinesti staff", "Sang"},
+			{"Justiciar faceguard", "Faceguard"}, {"Justiciar chestguard", "Chestguard"},
+			{"Justiciar legguards", "Legguards"}, {"Avernic defender hilt", "Hilt"},
+			{"Thread of elidinis", "Thread"}, {"Eye of the corruptor", "Eye"}, {"Jewel of the sun", "Jewel"},
+			{"Jewel of amascut", "Jewel"}, {"Breach of the scarab", "Breach"},
+			{"Tanzanite fang", "Tanz fang"}, {"Serpentine visage", "Visage"}, {"Skeletal visage", "Visage"},
+			{"Draconic visage", "Visage"}, {"Dragonbone necklace", "Necklace"}, {"Dragon warhammer", "DWH"},
+			{"Dragon pickaxe", "D pick"}, {"Armadyl crossbow", "ACB"}, {"Armadyl helmet", "Helm"},
+			{"Armadyl chestplate", "Chestplate"}, {"Armadyl chainskirt", "Chainskirt"},
+			{"Bandos chestplate", "Chestplate"}, {"Bandos tassets", "Tassets"}, {"Saradomin sword", "Sara sword"},
+			{"Staff of the dead", "SOTD"}, {"Abyssal bludgeon", "Bludgeon"}, {"Spectral spirit shield", "Spectral"},
+			{"Arcane spirit shield", "Arcane"}, {"Elysian spirit shield", "Elysian"}, {"Elysian sigil", "Sigil"},
+			{"Zaryte vambraces", "Vambs"}, {"Nihil horn", "Horn"}, {"Ancient hilt", "Hilt"},
+			{"Torva platebody", "Torva body"}, {"Torva platelegs", "Torva legs"}, {"Torva full helm", "Torva helm"},
+			{"Eldritch nightmare staff", "Eldritch"}, {"Volatile nightmare staff", "Volatile"},
+			{"Harmonised nightmare staff", "Harmonised"}, {"Hydra leather", "Leather"}, {"Hydra tail", "Tail"},
+			{"Hydra claw", "Claw"}, {"Primordial crystal", "Primordial"}, {"Pegasian crystal", "Pegasian"},
+			{"Eternal crystal", "Eternal"}, {"Smouldering stone", "Smouldering"}, {"Uncut onyx", "Onyx"},
+			{"Trident of the seas", "Trident"}, {"Occult necklace", "Occult"}, {"Tormented bracelet", "Bracelet"},
+			{"Amulet of torture", "Torture"}, {"Necklace of anguish", "Anguish"}, {"Ring of suffering", "Suffering"},
+		};
+		for (String[] pair : pairs)
+		{
+			ITEM_ABBREVIATIONS.put(normalize(pair[0]), pair[1]);
+		}
+	}
+
+	/**
+	 * A short name for an item: the usual nickname if there is one (Tbow, DWH, Sang), else an owner's name dropped
+	 * ("Osmumten's fang" becomes "fang", "Tumeken's shadow" becomes "shadow"), else the item itself.
+	 */
+	static String itemAbbreviation(String item)
+	{
+		String nickname = ITEM_ABBREVIATIONS.get(normalize(item));
+		if (nickname != null)
+		{
+			return nickname;
+		}
+		int space = item.indexOf(' ');
+		if (space > 0 && space < item.length() - 1)
+		{
+			String first = item.substring(0, space);
+			if (first.endsWith("'s") || first.endsWith("'"))
+			{
+				return item.substring(space + 1);
+			}
+		}
+		return item;
+	}
+
 	/** The wiki's short name for a source (ToB, CoX, KBD...), or the source itself if it has none. */
 	static String abbreviation(String source)
 	{

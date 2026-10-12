@@ -1,6 +1,7 @@
 package com.dropmarket;
 
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.Graphics2D;
 import javax.inject.Inject;
 import net.runelite.api.Client;
@@ -50,6 +51,13 @@ class DropMarketOverlay extends Overlay
 		Dimension preferred = getPreferredSize() != null ? getPreferredSize() : DEFAULT_SIZE;
 		// Compact and Ticker keep the width the player chose but have a fixed height.
 		int layoutHeight = MarketPainter.layoutHeight(config);
+		if (config.overlayLayout() == OverlayLayout.COMPACT && layoutHeight > 0)
+		{
+			// A long title takes a second line, so the card grows to hold it.
+			Font titleFont = FontManager.getRunescapeBoldFont();
+			layoutHeight += MarketPainter.compactExtraHeight(plugin.getTitle(), plugin.getBadgeText(), preferred.width,
+				graphics.getFontMetrics(titleFont), graphics.getFontMetrics(FontManager.getRunescapeSmallFont()));
+		}
 		boolean untouched = preferred.equals(DEFAULT_SIZE);
 		int width = config.overlayLayout() == OverlayLayout.TICKER && untouched ? TICKER_DEFAULT_WIDTH : preferred.width;
 		Dimension size = layoutHeight < 0 ? preferred : new Dimension(width, layoutHeight);

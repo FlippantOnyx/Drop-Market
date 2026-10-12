@@ -413,9 +413,9 @@ final class MarketPainter
 	}
 
 	/**
-	 * Draws line 1's big number and change, plus line 2's change (and, if enabled and it fits, line 2's big number)
-	 * starting at startX, and returns where it ended. In the Full layout the second number gets a bit of room when it
-	 * follows line 1's change; beside line 1's number, in Compact, and on the right side it is kept tight.
+	 * Draws line 1's big number and change, then line 2 after it: just its change when the second number is off,
+	 * otherwise its number and change, either pinned to the right edge of the box (Full, when "pin" is on) or
+	 * following line 1's change. Returns where the row ended.
 	 */
 	private static int drawOdds(Graphics2D g, int startX, int baseline, int limit, boolean full, Font bigFont,
 		Font smallFont, Color accent, Color accent2, String pct1, String pct2, int delta1, int delta2,
@@ -426,54 +426,30 @@ final class MarketPainter
 		int d1W = deltaWidth(g, delta1, smallFont);
 		int d2W = pct2 == null ? 0 : deltaWidth(g, delta2, smallFont);
 		int pct2W = pct2 == null ? 0 : bigFm.stringWidth(pct2);
-		SecondNumberPlacement placement = config.secondNumberPlacement();
 		boolean number = pct2 != null && config.showSecondNumber();
-		// The right side needs the whole box; Compact keeps that space for its sparkline.
-		if (placement == SecondNumberPlacement.RIGHT_SIDE && !full)
-		{
-			placement = SecondNumberPlacement.AFTER_CHANGE;
-		}
-		int numberGap = placement == SecondNumberPlacement.AFTER_CHANGE && full ? NUMBER_GAP : TIGHT_GAP;
+		// The right edge needs the whole box; Compact keeps that space for its sparkline.
+		boolean pinRight = full && config.pinSecondNumberRight();
+		// After line 1's change the number gets a bit of room in Full and stays tight in Compact.
+		int numberGap = full ? NUMBER_GAP : TIGHT_GAP;
 		if (number)
 		{
-			int left = pct1W + CHANGE_GAP + d1W;
-			int needed;
-			switch (placement)
-			{
-				case BESIDE_FIRST:
-					needed = pct1W + numberGap + pct2W + CHANGE_GAP + d1W + PAIR_GAP + d2W;
-					break;
-				case RIGHT_SIDE:
-					needed = left + RIGHT_SIDE_MIN_GAP + pct2W + CHANGE_GAP + d2W;
-					break;
-				default:
-					needed = left + numberGap + pct2W + CHANGE_GAP + d2W;
-					break;
-			}
+			int line1W = pct1W + CHANGE_GAP + d1W;
+			int needed = pinRight
+				? line1W + RIGHT_SIDE_MIN_GAP + pct2W + CHANGE_GAP + d2W
+				: line1W + numberGap + pct2W + CHANGE_GAP + d2W;
 			number = startX + needed <= limit;
 		}
 
 		int x = startX;
 		g.setFont(bigFont);
 		text(g, pct1, x, baseline, accent);
-		x += pct1W;
-		if (number && placement == SecondNumberPlacement.BESIDE_FIRST)
-		{
-			x += numberGap;
-			g.setFont(bigFont);
-			text(g, pct2, x, baseline, accent2);
-			x += pct2W + CHANGE_GAP;
-			x += drawDelta(g, x, baseline, delta1, accent, config.line1FallingColor(), smallFont) + PAIR_GAP;
-			return x + drawDelta(g, x, baseline, delta2, accent2, config.line2FallingColor(), smallFont);
-		}
-
-		x += CHANGE_GAP;
+		x += pct1W + CHANGE_GAP;
 		x += drawDelta(g, x, baseline, delta1, accent, config.line1FallingColor(), smallFont);
 		if (pct2 == null)
 		{
 			return x;
 		}
-		if (number && placement == SecondNumberPlacement.RIGHT_SIDE)
+		if (number && pinRight)
 		{
 			// Line 2's number and change hug the right edge of the box.
 			int rx = limit - (pct2W + CHANGE_GAP + d2W);
@@ -492,6 +468,7 @@ final class MarketPainter
 		}
 		else
 		{
+			// No second number: line 2's change simply follows line 1's.
 			x += PAIR_GAP;
 		}
 		return x + drawDelta(g, x, baseline, delta2, accent2, config.line2FallingColor(), smallFont);

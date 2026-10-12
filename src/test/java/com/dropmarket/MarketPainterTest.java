@@ -36,6 +36,13 @@ public class MarketPainterTest
 		String bar2Text = "";
 		OverlayLayout layout = OverlayLayout.FULL;
 		boolean showSecondNumber;
+		boolean pinSecondNumberRight = true;
+
+		@Override
+		public boolean pinSecondNumberRight()
+		{
+			return pinSecondNumberRight;
+		}
 
 		@Override
 		public boolean showSecondNumber()
@@ -342,5 +349,39 @@ public class MarketPainterTest
 		// The text rows sit above the chart, so extra line-2 colored pixels up there are the second number.
 		assertTrue(colorPixelsAbove(on, DropMarketConfig.DEFAULT_LINE2_COLOR, 70)
 			> colorPixelsAbove(off, DropMarketConfig.DEFAULT_LINE2_COLOR, 70));
+	}
+
+	private static int rightmostColorX(BufferedImage img, Color c, int maxY)
+	{
+		int best = -1;
+		for (int y = 0; y < Math.min(maxY, img.getHeight()); y++)
+		{
+			for (int x = 0; x < img.getWidth(); x++)
+			{
+				if ((img.getRGB(x, y) & 0xFFFFFF) == (c.getRGB() & 0xFFFFFF))
+				{
+					best = Math.max(best, x);
+				}
+			}
+		}
+		return best;
+	}
+
+	@Test
+	public void pinToggleMovesTheSecondNumberToTheRightEdge() throws Exception
+	{
+		MarketGraph poly = new MarketGraph(new Random(99));
+		poly.reset();
+		TestConfig config = new TestConfig();
+		config.showSecondLine = true;
+		config.showSecondNumber = true;
+		config.pinSecondNumberRight = true;
+		BufferedImage pinned = render("Zulrah drops Tanzanite fang", false, 0, 260, 192, config, poly, 0);
+		config.pinSecondNumberRight = false;
+		BufferedImage following = render("Zulrah drops Tanzanite fang", false, 0, 260, 192, config, poly, 0);
+		int edge = 260 - 6;
+		int pinnedX = rightmostColorX(pinned, DropMarketConfig.DEFAULT_LINE2_COLOR, 70);
+		assertTrue("pinned reaches the right edge: " + pinnedX, pinnedX >= edge - 6);
+		assertTrue(rightmostColorX(following, DropMarketConfig.DEFAULT_LINE2_COLOR, 70) < pinnedX);
 	}
 }

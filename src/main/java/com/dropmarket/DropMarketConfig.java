@@ -282,14 +282,14 @@ public interface DropMarketConfig extends Config
 	@ConfigItem(
 		keyName = "showSecondNumber",
 		name = "Show Second Odds Number",
-		description = "Also show line 2's big odds number (with its change) to the right of line 1's.<br>"
-			+ "Needs Show Second Line; hidden in layouts too narrow to fit it.",
+		description = "Show line 2's big odds number along with its change (hidden if the box is too narrow).<br>"
+			+ "Off: only line 2's change is shown, after line 1's.",
 		section = SECTION_LINES,
 		position = 4
 	)
 	default boolean showSecondNumber()
 	{
-		return false;
+		return true;
 	}
 
 	@ConfigItem(
@@ -384,7 +384,7 @@ public interface DropMarketConfig extends Config
 	)
 	default Color bar1TextColor()
 	{
-		return Color.WHITE;
+		return Color.BLACK;
 	}
 
 	@ConfigItem(
@@ -432,6 +432,6 @@ public interface DropMarketConfig extends Config
 	)
 	default Color bar2TextColor()
 	{
-		return Color.BLACK;
+		return Color.WHITE;
 	}
 }

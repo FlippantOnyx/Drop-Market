@@ -16,12 +16,12 @@ public class DropQualifierTest
 
 	private static boolean loot(long price, boolean onTable, boolean isTarget, boolean slot, ListStatus list)
 	{
-		return DropQualifier.lootQualifies(price, TWO_MIL, onTable, isTarget, slot, false, list, false, 0);
+		return DropQualifier.lootQualifies(price, TWO_MIL, onTable, isTarget, slot, false, list, false);
 	}
 
-	private static boolean popOff(long price, boolean onTable, boolean slot, boolean unique, ListStatus list, long min)
+	private static boolean popOff(long price, boolean onTable, boolean slot, boolean unique, ListStatus list)
 	{
-		return DropQualifier.lootQualifies(price, TWO_MIL, onTable, false, slot, unique, list, true, min);
+		return DropQualifier.lootQualifies(price, TWO_MIL, onTable, false, slot, unique, list, true);
 	}
 
 	@Test
@@ -53,9 +53,9 @@ public class DropQualifierTest
 	{
 		assertFalse(loot(50_000_000, true, true, true, BLACKLISTED));
 		assertFalse(loot(NO_PRICE, true, true, true, BLACKLISTED));
-		assertFalse(DropQualifier.lootQualifies(50_000_000, TWO_MIL, true, true, true, true, BLACKLISTED, false, 0));
-		assertFalse(popOff(50_000_000, true, true, true, BLACKLISTED, 0));
-		assertFalse(DropQualifier.valuableMessageQualifies(50_000_000, TWO_MIL, true, BLACKLISTED, true, 0));
+		assertFalse(DropQualifier.lootQualifies(50_000_000, TWO_MIL, true, true, true, true, BLACKLISTED, false));
+		assertFalse(popOff(50_000_000, true, true, true, BLACKLISTED));
+		assertFalse(DropQualifier.valuableMessageQualifies(50_000_000, TWO_MIL, true, BLACKLISTED, true));
 		assertFalse(DropQualifier.untradeableMessageQualifies(true, true, true, BLACKLISTED, true));
 		assertFalse(DropQualifier.collectionLogMessageQualifies(BLACKLISTED));
 		assertFalse(DropQualifier.marketMessageQualifies(BLACKLISTED));
@@ -68,8 +68,8 @@ public class DropQualifierTest
 		assertTrue(loot(10, false, false, false, PRIORITY));
 		assertTrue(loot(NO_PRICE, false, false, false, PRIORITY));
 		assertTrue(loot(PRICES_NOT_LOADED, false, false, false, PRIORITY));
-		assertTrue(popOff(10, false, false, false, PRIORITY, 1_000_000));
-		assertTrue(DropQualifier.valuableMessageQualifies(4_400, TWO_MIL, false, PRIORITY, false, 0));
+		assertTrue(popOff(10, false, false, false, PRIORITY));
+		assertTrue(DropQualifier.valuableMessageQualifies(4_400, TWO_MIL, false, PRIORITY, false));
 		assertTrue(DropQualifier.untradeableMessageQualifies(false, false, false, PRIORITY, false));
 		assertTrue(DropQualifier.collectionLogMessageQualifies(PRIORITY));
 		assertTrue(DropQualifier.marketMessageQualifies(PRIORITY));
@@ -100,31 +100,21 @@ public class DropQualifierTest
 	@Test
 	public void popOffCountsEverythingByDefault()
 	{
-		assertTrue(popOff(10, false, false, false, NONE, 0));
-		assertTrue(popOff(PRICES_NOT_LOADED, false, false, false, NONE, 0));
-	}
-
-	@Test
-	public void popOffMinValueFiltersCheapDropsButKeepsUnpricedChases()
-	{
-		assertFalse(popOff(500, true, false, false, NONE, 1_000));
-		assertTrue(popOff(1_000, false, false, false, NONE, 1_000));
-		assertTrue(popOff(NO_PRICE, false, true, false, NONE, 1_000));
-		assertFalse(popOff(NO_PRICE, false, false, false, NONE, 1_000));
-		assertTrue(popOff(10, true, false, true, NONE, 1_000));
+		assertTrue(popOff(10, false, false, false, NONE));
+		assertTrue(popOff(PRICES_NOT_LOADED, false, false, false, NONE));
 	}
 
 	@Test
 	public void valuableMessageRespectsThreshold()
 	{
-		assertFalse(DropQualifier.valuableMessageQualifies(4_400, TWO_MIL, false, NONE, false, 0));
-		assertTrue(DropQualifier.valuableMessageQualifies(TWO_MIL, TWO_MIL, false, NONE, false, 0));
+		assertFalse(DropQualifier.valuableMessageQualifies(4_400, TWO_MIL, false, NONE, false));
+		assertTrue(DropQualifier.valuableMessageQualifies(TWO_MIL, TWO_MIL, false, NONE, false));
 	}
 
 	@Test
 	public void valuableMessageForUnpriceableItemIsTrusted()
 	{
-		assertTrue(DropQualifier.valuableMessageQualifies(-1, TWO_MIL, false, NONE, false, 0));
+		assertTrue(DropQualifier.valuableMessageQualifies(-1, TWO_MIL, false, NONE, false));
 	}
 
 	@Test
@@ -146,30 +136,30 @@ public class DropQualifierTest
 	@Test
 	public void newLogItemCountsWhateverItIsWorth()
 	{
-		assertTrue(DropQualifier.lootQualifies(10, TWO_MIL, true, false, false, true, NONE, false, 0));
-		assertTrue(DropQualifier.lootQualifies(PRICES_NOT_LOADED, TWO_MIL, true, false, false, true, NONE, false, 0));
-		assertTrue(DropQualifier.lootQualifies(NO_PRICE, TWO_MIL, true, false, false, true, NONE, false, 0));
+		assertTrue(DropQualifier.lootQualifies(10, TWO_MIL, true, false, false, true, NONE, false));
+		assertTrue(DropQualifier.lootQualifies(PRICES_NOT_LOADED, TWO_MIL, true, false, false, true, NONE, false));
+		assertTrue(DropQualifier.lootQualifies(NO_PRICE, TWO_MIL, true, false, false, true, NONE, false));
 	}
 
 	@Test
 	public void newLogItemCountsEvenWhenTheTableOmitsIt()
 	{
-		assertTrue(DropQualifier.lootQualifies(10, TWO_MIL, false, false, false, true, NONE, false, 0));
+		assertTrue(DropQualifier.lootQualifies(10, TWO_MIL, false, false, false, true, NONE, false));
 	}
 
 	@Test
 	public void newLogItemValuableMessageCountsUnderTheThreshold()
 	{
-		assertTrue(DropQualifier.valuableMessageQualifies(4_400, TWO_MIL, true, NONE, false, 0));
+		assertTrue(DropQualifier.valuableMessageQualifies(4_400, TWO_MIL, true, NONE, false));
 	}
 
 	@Test
 	public void repeatOfACommonLogItemIsPriceChecked()
 	{
 		// Not new to the log and under the threshold (demon tears, bolt racks...): not a win.
-		assertFalse(DropQualifier.lootQualifies(900, TWO_MIL, true, false, true, false, NONE, false, 0));
-		assertFalse(DropQualifier.valuableMessageQualifies(900, TWO_MIL, false, NONE, false, 0));
+		assertFalse(DropQualifier.lootQualifies(900, TWO_MIL, true, false, true, false, NONE, false));
+		assertFalse(DropQualifier.valuableMessageQualifies(900, TWO_MIL, false, NONE, false));
 		// ...unless it clears the threshold.
-		assertTrue(DropQualifier.lootQualifies(TWO_MIL, TWO_MIL, true, false, true, false, NONE, false, 0));
+		assertTrue(DropQualifier.lootQualifies(TWO_MIL, TWO_MIL, true, false, true, false, NONE, false));
 	}
 }

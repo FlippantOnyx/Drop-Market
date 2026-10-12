@@ -49,10 +49,10 @@ final class MarketPainter
 		Graphics2D g = (Graphics2D) graphics.create();
 		try
 		{
-			boolean flashOn = resolved && config.flashOnDrop() && (nowTick / FLASH_PERIOD_TICKS) % 2 == 0;
-			Color lineColor = config.graphColor();
+			boolean flashOn = resolved && config.flashOnWin() && (nowTick / FLASH_PERIOD_TICKS) % 2 == 0;
+			Color lineColor = config.line1Color();
 			Color accent = flashOn ? RAID_PURPLE : lineColor;
-			MarketGraph secondLine = config.showDualLine() ? polyGraph : null;
+			MarketGraph secondLine = config.showSecondLine() ? polyGraph : null;
 			Color accent2 = flashOn ? RAID_PURPLE : config.line2Color();
 
 			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -142,10 +142,10 @@ final class MarketPainter
 			text(g, pctText, PAD, y, accent);
 			int x = PAD + bigFm.stringWidth(pctText) + 10;
 
-			int deltaW = drawDelta(g, x, y, delta1, accent, config.negativeDeltaColor1(), smallFont);
+			int deltaW = drawDelta(g, x, y, delta1, accent, config.line1FallingColor(), smallFont);
 			if (secondLine != null)
 			{
-				drawDelta(g, x + deltaW + 8, y, delta2, accent2, config.negativeDeltaColor2(), smallFont);
+				drawDelta(g, x + deltaW + 8, y, delta2, accent2, config.line2FallingColor(), smallFont);
 			}
 			y += bigFm.getDescent();
 			g.setFont(smallFont);

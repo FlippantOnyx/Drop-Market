@@ -7,10 +7,12 @@ package com.dropmarket;
  */
 final class DropQualifier
 {
-	/** No market value: untradeable, or new enough that the GE has no price for it yet. */
+	/** Untradeable: it can never have a GE price. */
 	static final long NO_PRICE = -1;
 	/** The price data hasn't loaded yet, so the item's value can't be judged. */
 	static final long PRICES_NOT_LOADED = -2;
+	/** A tradeable item the GE has no price for yet (brand new content), as opposed to NO_PRICE (untradeable). */
+	static final long NOT_PRICED_YET = -3;
 
 	/** Where an item sits on the user's lists. A blacklisted item stays blacklisted even if it's also a priority. */
 	enum ListStatus
@@ -33,7 +35,7 @@ final class DropQualifier
 	 * win minimum value.
 	 */
 	static boolean lootQualifies(long price, long threshold, boolean onTable, boolean isTarget, boolean clogSlot,
-		boolean newLogItem, ListStatus list, boolean popOff)
+		boolean newLogItem, boolean keepsValue, ListStatus list, boolean popOff)
 	{
 		if (list == ListStatus.BLACKLISTED)
 		{
@@ -57,9 +59,15 @@ final class DropQualifier
 			// Value can't be judged yet, but a collection log slot is a chase regardless of price.
 			return clogSlot;
 		}
+		if (price == NOT_PRICED_YET)
+		{
+			// Brand new tradeable content the GE hasn't priced: it can't be judged on value, so a real chase counts.
+			return onTable || isTarget || clogSlot;
+		}
 		if (price == NO_PRICE)
 		{
-			return onTable || isTarget || clogSlot;
+			// Untradeable: repeats only count when it is worth something anyway (a pet, or a part of an expensive item).
+			return keepsValue;
 		}
 		return (onTable || isTarget) && price >= threshold;
 	}
@@ -81,17 +89,18 @@ final class DropQualifier
 	}
 
 	/**
-	 * The game's "Untradeable drop" chat message. Real chases count (collection log slot, on the table, or from a
-	 * source with no known table at all - e.g. brand new content); other untradeables the game announces don't.
+	 * The game's "Untradeable drop" chat message. It only counts if the item is new to your collection log, is worth
+	 * something (a pet, or a part of an expensive item), or comes from a source with no known table at all (brand new
+	 * content). Repeats of ordinary untradeable uniques, like a Xeric's talisman, don't.
 	 */
-	static boolean untradeableMessageQualifies(boolean clogSlot, boolean onTable, boolean sourceHasNoTable,
+	static boolean untradeableMessageQualifies(boolean newLogItem, boolean keepsValue, boolean sourceHasNoTable,
 		ListStatus list, boolean popOff)
 	{
 		if (list != ListStatus.NONE)
 		{
 			return list == ListStatus.PRIORITY;
 		}
-		return popOff || clogSlot || onTable || sourceHasNoTable;
+		return popOff || newLogItem || keepsValue || sourceHasNoTable;
 	}
 
 	/** The game's collection log message: always a win unless the item is blacklisted. */

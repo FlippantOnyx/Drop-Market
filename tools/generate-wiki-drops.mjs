@@ -2,9 +2,10 @@
 //   wiki-drops.json       monster -> its best drops by value (what the market bets on)
 //   collection-log.json   every collection log item, and per monster the log items it drops (any rate: the plugin
 //                         price-checks the common ones itself)
+//   valuable-components.json   untradeable items used to make items worth 5m+ (celebrated despite having no GE price)
 // Run with: node tools/generate-wiki-drops.mjs   (needs Node 18+ for fetch; run before each release)
 import { writeFileSync } from 'node:fs';
-import { PAUSE_MS, sleep, wikiApi } from './wiki-api.mjs';
+import { PAUSE_MS, USER_AGENT, sleep, wikiApi } from './wiki-api.mjs';
 
 const OUT_DIR = new URL('../src/main/resources/com/dropmarket/', import.meta.url);
 const PAGE = 5000;
@@ -65,7 +66,45 @@ for (const key of [...logDrops.keys()].sort()) {
 	sources[key] = [...logDrops.get(key)].sort();
 }
 
+// Untradeable items that go into expensive tradeable ones (icons, fangs, cloth...): worth celebrating even though they
+// have no GE price. Recipes come from the wiki API; prices from the wiki's real-time prices API (made for tools).
+const PRICES = 'https://prices.runescape.wiki/api/v1/osrs';
+const MIN_COMPONENT_OUTPUT_VALUE = 5_000_000;
+async function prices(path) {
+	await sleep(PAUSE_MS);
+	const res = await fetch(`${PRICES}/${path}`, { headers: { 'User-Agent': USER_AGENT } });
+	if (!res.ok) throw new Error(`Prices API returned ${res.status}`);
+	return res.json();
+}
+const mapping = await prices('mapping');
+const latest = (await prices('latest')).data;
+const tradeable = new Set(mapping.map((m) => m.name));
+const worth = new Map();
+for (const m of mapping) {
+	const p = latest[m.id];
+	if (p) worth.set(m.name, Math.max(p.high ?? 0, p.low ?? 0));
+}
+const recipes = [];
+for (let offset = 0; ; offset += PAGE) {
+	await sleep(PAUSE_MS);
+	const query = `bucket('recipe').select('page_name','production_json').limit(${PAGE}).offset(${offset}).run()`;
+	const batch = (await wikiApi({ action: 'bucket', query })).bucket ?? [];
+	recipes.push(...batch);
+	if (batch.length < PAGE) break;
+}
+const components = new Set();
+for (const row of recipes) {
+	let recipe;
+	try { recipe = JSON.parse(row.production_json); } catch { continue; }
+	const output = recipe.output?.name;
+	if (!output || !Array.isArray(recipe.materials) || (worth.get(output) ?? 0) < MIN_COMPONENT_OUTPUT_VALUE) continue;
+	for (const material of recipe.materials) {
+		if (material.name && material.name !== 'Coins' && !tradeable.has(material.name)) components.add(material.name);
+	}
+}
+
 writeFileSync(new URL('wiki-drops.json', OUT_DIR), JSON.stringify(drops));
 writeFileSync(new URL('collection-log.json', OUT_DIR), JSON.stringify({ items: clogItems, sources }));
-console.log(`wrote ${Object.keys(drops).length} monsters, ${clogItems.length} log items, `
+writeFileSync(new URL('valuable-components.json', OUT_DIR), JSON.stringify([...components].sort()));
+console.log(`wrote ${Object.keys(drops).length} monsters, ${clogItems.length} log items, ${components.size} valuable components, `
 	+ `${Object.keys(sources).length} monsters with log drops`);

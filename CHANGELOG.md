@@ -2,6 +2,8 @@
 
 ## 1.2.0
 
+- Fix: a win no longer keeps flashing while you keep killing the same monster; it ends after Celebration Seconds
+- Repeat untradeable uniques (e.g. Xeric's talisman) no longer count as wins unless they are new to your log, a pet, or a part of an expensive item (icons, fangs, Mokhaiotl cloth...)
 - A second big odds number (Show Second Odds Number) with a position setting; Steady now ranges about 6-72%
 - Drift profiles last 10-15 minutes on an internal clock and only change after a finished kill or action, whatever the activity
 - Odds now move in "drift profiles": Steady (everyday), Climber (rises toward ~90 as a fight nears its end), Choppy, Sleeper, Spike and Fader; everyday highs top out around 82

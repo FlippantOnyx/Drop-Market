@@ -144,6 +144,9 @@ public class DropMarketPlugin extends Plugin
 	private UniqueDrops uniqueDrops;
 
 	@Inject
+	private ValuableComponents valuableComponents;
+
+	@Inject
 	private CollectionLogTracker clog;
 
 	@Getter
@@ -310,7 +313,7 @@ public class DropMarketPlugin extends Plugin
 		{
 			boolean sameMonster = source != null && source.equals(marketSource);
 			boolean differentMonster = source != null && !sameMonster;
-			if (differentMonster || (ticks - resolvedTick >= celebrationTicks() && !sameMonster))
+			if (Celebration.isOver(ticks - resolvedTick, celebrationTicks(), differentMonster))
 			{
 				resolved = false;
 				personalOverride = false;
@@ -657,7 +660,7 @@ public class DropMarketPlugin extends Plugin
 				if (value < 0)
 				{
 					long price = priceOf(item);
-					value = price == DropQualifier.NO_PRICE || price == DropQualifier.PRICES_NOT_LOADED ? -1 : price;
+					value = price < 0 ? -1 : price;
 				}
 				boolean newLogItem = uniqueDrops.isLogDrop(currentSource(), item) && !clog.isObtained(item);
 				if (DropQualifier.valuableMessageQualifies(value, config.winMinimumValue(), newLogItem,
@@ -671,7 +674,8 @@ public class DropMarketPlugin extends Plugin
 				// Only real chases count, not every untradeable the game announces.
 				String item = parseDropItem(raw);
 				List<String> table = currentTable();
-				if (DropQualifier.untradeableMessageQualifies(clog.isSlot(item), tableContains(table, item), table == null,
+				if (DropQualifier.untradeableMessageQualifies(uniqueDrops.isLogDrop(currentSource(), item) && !clog.isObtained(item),
+					keepsValue(item), table == null,
 					listStatusHere(item), config.popOffOnEveryDrop()))
 				{
 					celebrateDrop(item);
@@ -990,6 +994,12 @@ public class DropMarketPlugin extends Plugin
 		return !fromWiki && !clog.hasFullLog();
 	}
 
+	/** An untradeable that is still worth celebrating: a pet, or a part of an expensive item (icons, fangs, cloth...). */
+	private boolean keepsValue(String item)
+	{
+		return DropTables.isPet(item) || valuableComponents.contains(item);
+	}
+
 	private boolean pricesLoaded()
 	{
 		return !itemManager.search("Coins").isEmpty();
@@ -1013,7 +1023,12 @@ public class DropMarketPlugin extends Plugin
 		{
 			if (ip.getName().equalsIgnoreCase(name))
 			{
+				// Found in the GE search, so it is tradeable: a price of 0 just means the GE has no price for it yet.
 				price = itemManager.getItemPrice(ip.getId());
+				if (price <= 0)
+				{
+					price = DropQualifier.NOT_PRICED_YET;
+				}
 				break;
 			}
 		}
@@ -1053,9 +1068,9 @@ public class DropMarketPlugin extends Plugin
 			// A log item you haven't got yet opens a new collection log slot; repeats of common ones get price-checked.
 			boolean newLogItem = logDrop && !clog.isObtained(name);
 			boolean qualifies = DropQualifier.lootQualifies(price, config.winMinimumValue(), onTable, isTarget,
-				slot, newLogItem, listStatus(marketSource, table, name), popOff);
+				slot, newLogItem, keepsValue(name), listStatus(marketSource, table, name), popOff);
 			// A table/target item with no market value is a collection log chase we haven't seen yet: learn it.
-			if (slot || logDrop || ((isTarget || onTable) && price == DropQualifier.NO_PRICE))
+			if (slot || logDrop || ((isTarget || onTable) && (price == DropQualifier.NO_PRICE || price == DropQualifier.NOT_PRICED_YET)))
 			{
 				clogChanged |= clog.record(name, true);
 			}

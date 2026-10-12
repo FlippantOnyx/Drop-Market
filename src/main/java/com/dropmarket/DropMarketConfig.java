@@ -32,7 +32,8 @@ public interface DropMarketConfig extends Config
 	@ConfigSection(
 		name = "Drop Lists",
 		description = "Drops to always bet on, and drops to never count",
-		position = 1
+		position = 1,
+		closedByDefault = true
 	)
 	String dropListsSection = SECTION_DROPS;
 
@@ -70,7 +71,8 @@ public interface DropMarketConfig extends Config
 	@ConfigSection(
 		name = "Market & Win Rules",
 		description = "Which monsters get a market, and what counts as a win",
-		position = 2
+		position = 2,
+		closedByDefault = true
 	)
 	String winRulesSection = SECTION_WINS;
 
@@ -125,7 +127,8 @@ public interface DropMarketConfig extends Config
 	@ConfigSection(
 		name = "Celebration",
 		description = "How a win looks and how long it lasts",
-		position = 3
+		position = 3,
+		closedByDefault = true
 	)
 	String celebrationSection = SECTION_CELEBRATION;
 
@@ -198,7 +201,8 @@ public interface DropMarketConfig extends Config
 	@ConfigSection(
 		name = "Graph Lines",
 		description = "Colors of the two odds lines and their change indicators",
-		position = 5
+		position = 5,
+		closedByDefault = true
 	)
 	String graphLinesSection = SECTION_LINES;
 

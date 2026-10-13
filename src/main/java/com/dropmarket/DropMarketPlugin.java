@@ -65,8 +65,9 @@ import net.runelite.http.api.item.ItemPrice;
 @Slf4j
 @PluginDescriptor(
 	name = "Prediction Market Drops",
-	// Names the plugin's own data folder (see getPluginDirectory), where the custom win sounds go.
-	internalName = "prediction-market-drops",
+	// Must match this plugin's name in the hub (plugins/drop-market); it also names the plugin's data folder, where the
+	// custom win sounds go (see getPluginDirectory).
+	internalName = "drop-market",
 	description = "A tiny prediction-market graph betting on your next big drop",
 	tags = {"drop", "loot", "odds", "graph", "market", "raids", "fun", "prediction market", "kalshi", "polymarket"}
 )

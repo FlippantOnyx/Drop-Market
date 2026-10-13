@@ -161,7 +161,8 @@ public class ArchitectureTest
 	public void thePluginHasAnInternalNameRuneLiteAccepts() throws Exception
 	{
 		String internal = DropMarketPlugin.class.getAnnotation(net.runelite.client.plugins.PluginDescriptor.class).internalName();
-		Assert.assertFalse(internal.isEmpty());
+		// The hub's build rejects any other value: it must be the plugin's name under plugins/ in runelite/plugin-hub.
+		Assert.assertEquals("drop-market", internal);
 		java.lang.reflect.Method check = net.runelite.client.util.Filepath.class.getDeclaredMethod("checkName", String.class);
 		check.setAccessible(true);
 		check.invoke(null, internal);

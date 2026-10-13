@@ -197,7 +197,7 @@ and read the bot's "RL CHECKS" comment on every hub PR.
 `WinSound` is a list of game sound effects played in a row (the bell is six notes) at `Win Sound Volume` (0-127 in the game's
 own scale, via `playSoundEffect(id, volume)`). The default is `GE_CHIME`. The Grand Exchange trade jingle itself is music and
 cannot be played by a plugin, and Jagex's audio must not be bundled. `CUSTOM` plays the player's own WAV files from
-the plugin's data folder, `Plugin.getPluginDirectory()` (needs `internalName` in `@PluginDescriptor`) as a sandboxed `Filepath` (`win.wav`, plus optional `collection-log.wav` and `pet.wav`, see `SoundEvent`; modelled on
+the plugin's data folder, `Plugin.getPluginDirectory()` (needs `internalName` in `@PluginDescriptor`, which the hub requires to equal our hub name, `drop-market`) as a sandboxed `Filepath` (`win.wav`, plus optional `collection-log.wav` and `pet.wav`, see `SoundEvent`; modelled on
 c-engineer-completed: fixed names, nothing deleted, subfolders ignored) through RuneLite's `AudioPlayer` (the hub rejects `javax.sound`) on RuneLite's injected executor (never the client thread), falling
 back to the chime. The two "button" settings (`testWinSound`, `showSoundFolder`, which prints the folder path in chat) un-tick themselves in `handleConfigChanged`.
 

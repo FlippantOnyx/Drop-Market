@@ -344,6 +344,13 @@ public class PluginIntegrationTest
 					bind(DropMarketPlugin.class).toInstance(plugin);
 					bind(Gson.class).toInstance(new Gson());
 					bind(OkHttpClient.class).toInstance(new OkHttpClient());
+					bind(java.util.concurrent.ScheduledExecutorService.class).toInstance(
+						java.util.concurrent.Executors.newSingleThreadScheduledExecutor(runnable ->
+						{
+							Thread thread = new Thread(runnable);
+							thread.setDaemon(true);
+							return thread;
+						}));
 				}
 			});
 			injector.injectMembers(plugin);
@@ -627,7 +634,7 @@ public class PluginIntegrationTest
 		Assert.assertEquals(1, gem.sounds.size());
 		Assert.assertEquals(2655, gem.sounds.get(0)[0]);
 
-		Rig off = new Rig(Mode.NORMAL);
+		Rig off = new Rig(Mode.NORMAL, WinSound.OFF);
 		off.plugin.startUp();
 		off.plugin.onChatMessage(new ChatMessage(null, ChatMessageType.GAMEMESSAGE, "",
 			"New item added to your collection log: Tanzanite fang", null, 1));

@@ -23,7 +23,9 @@ public enum WinSound
 	BELL_DING("Town crier bell",
 		SoundEffectID.TOWN_CRIER_BELL_DING, SoundEffectID.TOWN_CRIER_BELL_DONG,
 		SoundEffectID.TOWN_CRIER_BELL_DING, SoundEffectID.TOWN_CRIER_BELL_DONG,
-		SoundEffectID.TOWN_CRIER_BELL_DING, SoundEffectID.TOWN_CRIER_BELL_DONG);
+		SoundEffectID.TOWN_CRIER_BELL_DING, SoundEffectID.TOWN_CRIER_BELL_DONG),
+	// The player's own win.wav in the plugin's sound folder (see CustomSound); it has no built-in notes.
+	CUSTOM("Custom file");
 
 	private final String label;
 	private final int[] notes;

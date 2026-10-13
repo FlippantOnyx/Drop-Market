@@ -13,6 +13,7 @@ public class WinSoundTest
 	public void offPlaysNothingAndOthersHaveTheirIds()
 	{
 		assertEquals(0, WinSound.OFF.notes().length);
+		assertEquals(0, WinSound.CUSTOM.notes().length);
 		assertArrayEquals(new int[]{6765}, WinSound.COLLECTION_LOG.notes());
 		assertArrayEquals(new int[]{2655}, WinSound.GEM_ALERT.notes());
 		assertArrayEquals(new int[]{SoundEffectID.GE_COIN_TINKLE}, WinSound.COIN_TINKLE.notes());
@@ -47,12 +48,12 @@ public class WinSoundTest
 	}
 
 	@Test
-	public void defaultIsFullVolumeAndOff()
+	public void defaultIsFullVolumeAndTheGrandExchangeChime()
 	{
 		DropMarketConfig config = new DropMarketConfig()
 		{
 		};
 		assertEquals(100, config.winSoundVolume());
-		assertTrue(config.winSound() == WinSound.OFF);
+		assertTrue(config.winSound() == WinSound.GE_CHIME);
 	}
 }

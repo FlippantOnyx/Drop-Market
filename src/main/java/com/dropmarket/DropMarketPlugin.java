@@ -56,6 +56,7 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.plugins.loottracker.LootReceived;
 import net.runelite.client.ui.overlay.OverlayManager;
+import net.runelite.client.util.LinkBrowser;
 import net.runelite.client.util.Text;
 import net.runelite.http.api.item.ItemPrice;
 
@@ -133,6 +134,9 @@ public class DropMarketPlugin extends Plugin
 
 	@Inject
 	private ProfileStore profileStore;
+
+	@Inject
+	private CustomSound customSound;
 
 	@Inject
 	private DropMarketConfig config;
@@ -232,6 +236,8 @@ public class DropMarketPlugin extends Plugin
 	private boolean personalOverride;
 	// The Font of Consumption, once its scenery has loaded, and the inventory last seen at it (for spotting an offering).
 	private WorldPoint fontPoint;
+	// The "couldn't play your custom sound" message is shown once until they pick Custom again.
+	private boolean customSoundWarned;
 	private final Map<Integer, Integer> lastInventory = new HashMap<>();
 
 	@Override
@@ -337,6 +343,7 @@ public class DropMarketPlugin extends Plugin
 	protected void shutDown()
 	{
 		guard.run("shutDown overlay", () -> overlayManager.remove(overlay));
+		guard.run("shutDown sound", customSound::stop);
 		resolved = false;
 		showingMarket = false;
 		marketSource = null;
@@ -879,6 +886,30 @@ public class DropMarketPlugin extends Plugin
 	{
 		if (!DropMarketConfig.GROUP.equals(event.getGroup()))
 		{
+			return;
+		}
+		// Two settings are buttons: ticking them does something and they un-tick themselves.
+		if ("true".equals(event.getNewValue()) && "testWinSound".equals(event.getKey()))
+		{
+			profileStore.setSetting("testWinSound", "false");
+			playWinSound(config.winSound(), config.winSoundVolume());
+			return;
+		}
+		if ("true".equals(event.getNewValue()) && "openSoundFolder".equals(event.getKey()))
+		{
+			profileStore.setSetting("openSoundFolder", "false");
+			customSound.prepareFolder();
+			LinkBrowser.open(customSound.folder().getAbsolutePath());
+			return;
+		}
+		if ("winSound".equals(event.getKey()) && WinSound.CUSTOM.name().equals(event.getNewValue()))
+		{
+			// Picking Custom is the moment to say where the file goes.
+			customSoundWarned = false;
+			customSound.prepareFolder();
+			client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", "Prediction Market Drops: for a custom win sound put a WAV "
+				+ "file named " + CustomSound.FILE_NAME + " in " + customSound.folder().getAbsolutePath()
+				+ " (tick Open Sound Folder in the settings to open it).", null);
 			return;
 		}
 		priorities = DropTables.parsePriorities(config.priorityDrops());
@@ -1496,6 +1527,22 @@ public class DropMarketPlugin extends Plugin
 	 */
 	private void playWinSound(WinSound sound, int percent)
 	{
+		if (sound == WinSound.CUSTOM)
+		{
+			// The player's own file; if it can't be played the Grand Exchange chime stands in and they are told why.
+			customSound.play(percent, () -> clientThread.invoke(() -> guard.run("custom sound fallback", () ->
+			{
+				if (!customSoundWarned)
+				{
+					customSoundWarned = true;
+					client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", "Prediction Market Drops: couldn't play "
+						+ CustomSound.FILE_NAME + ", so the Grand Exchange chime played instead. Put a WAV file with that name in "
+						+ customSound.folder().getAbsolutePath() + " (tick Open Sound Folder in the settings).", null);
+				}
+				playWinSound(WinSound.GE_CHIME, percent);
+			})));
+			return;
+		}
 		int[] notes = sound.notes();
 		int volume = soundVolume(percent);
 		if (notes.length == 0 || volume == 0)

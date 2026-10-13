@@ -223,13 +223,15 @@ public interface DropMarketConfig extends Config
 	@ConfigItem(
 		keyName = "winSound",
 		name = "Win Sound",
-		description = "A built-in game sound to play on a win",
+		description = "A built-in game sound to play on a win.<br>"
+			+ "Custom file plays your own sound: choose it, tick Open Sound Folder, put a WAV file named win.wav in the<br>"
+			+ "folder that opens (a HOW-TO.txt is there too), then tick Test Win Sound to hear it.",
 		section = SECTION_CELEBRATION,
 		position = 3
 	)
 	default WinSound winSound()
 	{
-		return WinSound.OFF;
+		return WinSound.GE_CHIME;
 	}
 
 	@ConfigItem(
@@ -248,11 +250,35 @@ public interface DropMarketConfig extends Config
 	}
 
 	@ConfigItem(
+		keyName = "testWinSound",
+		name = "Test Win Sound",
+		description = "Tick to play the chosen win sound now (the box un-ticks itself)",
+		section = SECTION_CELEBRATION,
+		position = 5
+	)
+	default boolean testWinSound()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		keyName = "openSoundFolder",
+		name = "Open Sound Folder",
+		description = "Tick to open the folder where your custom win.wav goes (the box un-ticks itself)",
+		section = SECTION_CELEBRATION,
+		position = 6
+	)
+	default boolean openSoundFolder()
+	{
+		return false;
+	}
+
+	@ConfigItem(
 		keyName = "celebrationSeconds",
 		name = "Celebration Seconds",
 		description = "How long a win stays on screen before the overlay goes back to normal",
 		section = SECTION_CELEBRATION,
-		position = 5
+		position = 7
 	)
 	@Range(min = 5, max = 120)
 	@Units(Units.SECONDS)

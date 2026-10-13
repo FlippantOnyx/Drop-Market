@@ -3,6 +3,8 @@
 ## 1.3.0
 
 - Win sounds are louder: a new Win Sound Volume setting (100% by default) plays them at their own volume
+- The Grand Exchange Chime is the default win sound
+- Custom Win Sound: pick "Custom file" and play your own WAV (win.wav in the plugin's sound folder under .runelite), with Open Sound Folder and Test Win Sound buttons, a how-to file in the folder, and the chime as a fallback
 - New win sounds Grand Exchange Chime, Collection Log and Gem Alert; "Collect bloop" is gone; the town crier bell now rings up and down six times
 - The change numbers stay put during a celebration instead of dropping to 0% when another drop lands
 - The odds lines are drawn rigid like a real market chart: flat holds, straight runs, sharp corners and sudden jumps instead of a smooth wiggle

@@ -176,6 +176,14 @@ and the overlay threw an `IllegalAccessError` into the client every frame. The r
 - The overlay manager can't be stubbed either, so the integration test tolerates the two overlay register/unregister
   failures and nothing else.
 
+## Win sounds
+
+`WinSound` is a list of game sound effects played in a row (the bell is six notes) at `Win Sound Volume` (0-127 in the game's
+own scale, via `playSoundEffect(id, volume)`). The default is `GE_CHIME`. The Grand Exchange trade jingle itself is music and
+cannot be played by a plugin, and Jagex's audio must not be bundled. `CUSTOM` plays the player's own `win.wav` from
+`.runelite/prediction-market-drops/` through `javax.sound` on RuneLite's injected executor (never the client thread), falling
+back to the chime. The two "button" settings (`testWinSound`, `openSoundFolder`) un-tick themselves in `handleConfigChanged`.
+
 ## Multi-part items and the Font of Consumption
 
 - Items that need several untradeable drops (Noxious halberd: blade, point, pommel; Abyssal bludgeon: axon, claw, spine)

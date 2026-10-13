@@ -24,7 +24,7 @@ A drop only counts as a win if it's worth at least the **Win Minimum Drop Value*
 - **Priority drops** (always a win, and bet on instead of the default pick) and a **blacklist** (never bet on or celebrated; trumps everything) (`Source: Item` per line)
 - **Win Minimum Drop Value** (what counts as a win) and **Market Minimum Drop Value** (which monsters get a market), in the denomination chosen under **Value Units** (k by default)
 - **Overlay Layout**: Full, Compact or Ticker
-- **Flash Purple on Win**, **Win Sound** (built-in game sounds: coin tinkle, offer ding, collection log, gem alert, or the town crier's bell ringing up and down) with its own **Win Sound Volume**, **Celebration Seconds**, and **Resolve Win on Every Drop** (every drop is a win)
+- **Flash Purple on Win**, **Win Sound** (built-in game sounds: coin tinkle, offer ding, collection log, gem alert, or the town crier's bell ringing up and down) with its own **Win Sound Volume**. The default is the Grand Exchange chime. Pick **Custom file** to play your own sound: tick **Open Sound Folder**, put a WAV file named `win.wav` in it (a `HOW-TO.txt` is there too), and tick **Test Win Sound** to hear it, **Celebration Seconds**, and **Resolve Win on Every Drop** (every drop is a win)
 - Optional RuneProfile sync, and optional live OSRS Wiki lookups for monsters missing from the bundled tables
 
 Alt-drag the bottom-right corner to resize the overlay.

@@ -41,6 +41,7 @@ import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.events.NpcLootReceived;
 import net.runelite.client.events.RuneScapeProfileChanged;
 import net.runelite.client.game.ItemStack;
+import net.runelite.client.util.Filepath;
 import net.runelite.client.plugins.loottracker.LootReceived;
 import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.http.api.item.ItemPrice;
@@ -184,11 +185,11 @@ public class PluginIntegrationTest
 	{
 		final List<Integer> plays = new ArrayList<>();
 		final List<SoundEvent> events = new ArrayList<>();
-		int opened;
+		int prepared;
 
 		StubCustomSound()
 		{
-			super(null, null, new java.io.File("stub-sound-folder"));
+			super(null, null);
 		}
 
 		@Override
@@ -199,14 +200,15 @@ public class PluginIntegrationTest
 		}
 
 		@Override
-		void openFolder()
+		void prepareFolder()
 		{
-			opened++;
+			prepared++;
 		}
 
 		@Override
-		void prepareFolder()
+		String folderPath()
 		{
+			return "stub-sound-folder";
 		}
 	}
 
@@ -364,7 +366,15 @@ public class PluginIntegrationTest
 			OverlayManager overlays = allocate(OverlayManager.class);
 			ClientThread thread = allocate(StubClientThread.class);
 			ItemLookup items = new StubItemLookup(mode);
-			plugin = new DropMarketPlugin();
+			// RuneLite's real plugin folder is never touched in tests.
+			plugin = new DropMarketPlugin()
+			{
+				@Override
+				Filepath soundFolder()
+				{
+					return null;
+				}
+			};
 			DropMarketConfig config = config(winSound, mode == Mode.NULL_CONFIG);
 			Injector injector = Guice.createInjector(new AbstractModule()
 			{
@@ -459,7 +469,7 @@ public class PluginIntegrationTest
 				ConfigChanged changed = new ConfigChanged();
 				changed.setGroup(DropMarketConfig.GROUP);
 				changed.setKey(new String[]{"priorityDrops", "blacklistedDrops", "overlayLayout", "winSound", "testWinSound",
-					"openSoundFolder", "valueUnit", null}[random.nextInt(8)]);
+					"showSoundFolder", "valueUnit", null}[random.nextInt(8)]);
 				changed.setNewValue(new String[]{"true", "false", "CUSTOM", null, "garbage"}[random.nextInt(5)]);
 				plugin.onConfigChanged(changed);
 				break;
@@ -724,18 +734,18 @@ public class PluginIntegrationTest
 		Assert.assertEquals(Collections.singletonList(100), rig.customSound.plays);
 		Assert.assertEquals("false", rig.store.settings.get("testWinSound"));
 
-		ConfigChanged open = new ConfigChanged();
-		open.setGroup(DropMarketConfig.GROUP);
-		open.setKey("openSoundFolder");
-		open.setNewValue("true");
-		rig.plugin.onConfigChanged(open);
-		Assert.assertEquals(1, rig.customSound.opened);
-		Assert.assertEquals("false", rig.store.settings.get("openSoundFolder"));
+		ConfigChanged show = new ConfigChanged();
+		show.setGroup(DropMarketConfig.GROUP);
+		show.setKey("showSoundFolder");
+		show.setNewValue("true");
+		rig.plugin.onConfigChanged(show);
+		Assert.assertEquals(1, rig.customSound.prepared);
+		Assert.assertEquals("false", rig.store.settings.get("showSoundFolder"));
 
 		// Un-ticking (the plugin's own reset, or the player) does nothing.
-		open.setNewValue("false");
-		rig.plugin.onConfigChanged(open);
-		Assert.assertEquals(1, rig.customSound.opened);
+		show.setNewValue("false");
+		rig.plugin.onConfigChanged(show);
+		Assert.assertEquals(1, rig.customSound.prepared);
 		Assert.assertEquals(Collections.emptyList(), rig.unexpectedFailures());
 	}
 

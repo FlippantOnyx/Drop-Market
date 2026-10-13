@@ -184,14 +184,22 @@ and the overlay threw an `IllegalAccessError` into the client every frame. The r
 - The overlay manager can't be stubbed either, so the integration test tolerates the two overlay register/unregister
   failures and nothing else.
 
+## Hub reviewer rules (learned from review comments)
+
+The hub's bot and maintainers reject, and `ArchitectureTest.restrictedApisAreNeverUsed` forbids: `javax.sound` (use
+`net.runelite.client.audio.AudioPlayer`), `LinkBrowser`/`Desktop` (restricted APIs, so the plugin can never open a folder or
+a URL for the player: show the path in chat instead), and direct file I/O (`java.io.File`, `Files`, `RUNELITE_DIR`; use
+`net.runelite.client.util.Filepath`, obtained from `getPluginDirectory()`). Check a new API against these before using it,
+and read the bot's "RL CHECKS" comment on every hub PR.
+
 ## Win sounds
 
 `WinSound` is a list of game sound effects played in a row (the bell is six notes) at `Win Sound Volume` (0-127 in the game's
 own scale, via `playSoundEffect(id, volume)`). The default is `GE_CHIME`. The Grand Exchange trade jingle itself is music and
 cannot be played by a plugin, and Jagex's audio must not be bundled. `CUSTOM` plays the player's own WAV files from
-`.runelite/prediction-market-drops/` (`win.wav`, plus optional `collection-log.wav` and `pet.wav`, see `SoundEvent`; modelled on
+the plugin's data folder, `Plugin.getPluginDirectory()` (needs `internalName` in `@PluginDescriptor`) as a sandboxed `Filepath` (`win.wav`, plus optional `collection-log.wav` and `pet.wav`, see `SoundEvent`; modelled on
 c-engineer-completed: fixed names, nothing deleted, subfolders ignored) through RuneLite's `AudioPlayer` (the hub rejects `javax.sound`) on RuneLite's injected executor (never the client thread), falling
-back to the chime. The two "button" settings (`testWinSound`, `openSoundFolder`) un-tick themselves in `handleConfigChanged`.
+back to the chime. The two "button" settings (`testWinSound`, `showSoundFolder`, which prints the folder path in chat) un-tick themselves in `handleConfigChanged`.
 
 ## Multi-part items and the Font of Consumption
 

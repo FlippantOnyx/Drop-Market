@@ -3,6 +3,7 @@ package com.dropmarket;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Provides;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -57,12 +58,15 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.plugins.loottracker.LootReceived;
 import net.runelite.client.ui.overlay.OverlayManager;
+import net.runelite.client.util.Filepath;
 import net.runelite.client.util.Text;
 import net.runelite.http.api.item.ItemPrice;
 
 @Slf4j
 @PluginDescriptor(
 	name = "Prediction Market Drops",
+	// Names the plugin's own data folder (see getPluginDirectory), where the custom win sounds go.
+	internalName = "prediction-market-drops",
 	description = "A tiny prediction-market graph betting on your next big drop",
 	tags = {"drop", "loot", "odds", "graph", "market", "raids", "fun", "prediction market", "kalshi", "polymarket"}
 )
@@ -246,6 +250,7 @@ public class DropMarketPlugin extends Plugin
 	protected void startUp()
 	{
 		guard.run("startUp settings", this::migrateLegacyValues);
+		guard.run("startUp sound folder", this::locateSoundFolder);
 		guard.run("startUp", this::resetState);
 		// The overlay goes up even if resetting hit a problem, so the plugin never half-starts.
 		guard.run("startUp overlay", () -> overlayManager.add(overlay));
@@ -256,6 +261,33 @@ public class DropMarketPlugin extends Plugin
 				clientThread.invoke(() -> guard.run("collection log load", clog::load));
 			}
 		});
+	}
+
+	/** RuneLite's sandboxed folder for this plugin; overridden in tests so they don't touch the real one. */
+	Filepath soundFolder() throws IOException
+	{
+		return getPluginDirectory();
+	}
+
+	private void locateSoundFolder()
+	{
+		try
+		{
+			customSound.setFolder(soundFolder());
+		}
+		catch (IOException | RuntimeException e)
+		{
+			log.debug("No plugin data folder for custom sounds", e);
+		}
+	}
+
+	/** Says in chat where the custom sound files go, since the plugin can't open the folder for them. */
+	private void tellSoundFolder()
+	{
+		String path = customSound.folderPath();
+		client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", "Prediction Market Drops: for a custom win sound put a WAV file named "
+			+ CustomSound.FILE_NAME + " in " + (path.isEmpty() ? "the plugin's data folder (not available right now)" : path)
+			+ " (collection-log.wav and pet.wav are optional extras, and a HOW-TO.txt is in the folder).", null);
 	}
 
 	private long winMinimumGp()
@@ -901,10 +933,11 @@ public class DropMarketPlugin extends Plugin
 			playWinSound(config.winSound(), config.winSoundVolume(), SoundEvent.WIN);
 			return;
 		}
-		if ("true".equals(event.getNewValue()) && "openSoundFolder".equals(event.getKey()))
+		if ("true".equals(event.getNewValue()) && "showSoundFolder".equals(event.getKey()))
 		{
-			profileStore.setSetting("openSoundFolder", "false");
-			customSound.openFolder();
+			profileStore.setSetting("showSoundFolder", "false");
+			customSound.prepareFolder();
+			tellSoundFolder();
 			return;
 		}
 		if ("winSound".equals(event.getKey()) && WinSound.CUSTOM.name().equals(event.getNewValue()))
@@ -912,10 +945,7 @@ public class DropMarketPlugin extends Plugin
 			// Picking Custom is the moment to say where the file goes.
 			customSoundWarned = false;
 			customSound.prepareFolder();
-			client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", "Prediction Market Drops: for a custom win sound put a WAV "
-				+ "file named " + CustomSound.FILE_NAME + " in " + customSound.folder().getAbsolutePath()
-				+ " (tick Open Sound Folder in the settings to open it; collection-log.wav and pet.wav are optional extras).",
-				null);
+			tellSoundFolder();
 			return;
 		}
 		priorities = DropTables.parsePriorities(config.priorityDrops());
@@ -1551,9 +1581,9 @@ public class DropMarketPlugin extends Plugin
 				if (!customSoundWarned)
 				{
 					customSoundWarned = true;
-					client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", "Prediction Market Drops: couldn't play "
-						+ CustomSound.FILE_NAME + ", so the Grand Exchange chime played instead. Put a WAV file with that name in "
-						+ customSound.folder().getAbsolutePath() + " (tick Open Sound Folder in the settings).", null);
+					client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", "Prediction Market Drops: couldn't play your custom "
+						+ "sound, so the Grand Exchange chime played instead. Tick Show Sound Folder Path in the settings to see "
+						+ "where " + CustomSound.FILE_NAME + " goes.", null);
 				}
 				playWinSound(WinSound.GE_CHIME, percent, event);
 			})));

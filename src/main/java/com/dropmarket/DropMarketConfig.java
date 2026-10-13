@@ -224,8 +224,8 @@ public interface DropMarketConfig extends Config
 		keyName = "winSound",
 		name = "Win Sound",
 		description = "A built-in game sound to play on a win.<br>"
-			+ "Custom file plays your own sound: choose it, tick Open Sound Folder, put a WAV file named win.wav in the<br>"
-			+ "folder that opens (a HOW-TO.txt is there too), then tick Test Win Sound to hear it.<br>"
+			+ "Custom file plays your own sound: choose it, tick Show Sound Folder Path to see (in chat) where the plugin's<br>"
+			+ "sound folder is, put a WAV file named win.wav there (a HOW-TO.txt is there too), then tick Test Win Sound.<br>"
 			+ "Optional: collection-log.wav and pet.wav give those wins their own sound; anything missing uses win.wav.",
 		section = SECTION_CELEBRATION,
 		position = 3
@@ -263,13 +263,13 @@ public interface DropMarketConfig extends Config
 	}
 
 	@ConfigItem(
-		keyName = "openSoundFolder",
-		name = "Open Sound Folder",
-		description = "Tick to open the folder where your custom win.wav goes (the box un-ticks itself)",
+		keyName = "showSoundFolder",
+		name = "Show Sound Folder Path",
+		description = "Tick to show in chat where your custom win.wav goes (the box un-ticks itself)",
 		section = SECTION_CELEBRATION,
 		position = 6
 	)
-	default boolean openSoundFolder()
+	default boolean showSoundFolder()
 	{
 		return false;
 	}

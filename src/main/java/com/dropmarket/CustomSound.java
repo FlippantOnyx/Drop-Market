@@ -1,31 +1,29 @@
 package com.dropmarket;
 
-import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.util.concurrent.ScheduledExecutorService;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
-import net.runelite.client.RuneLite;
 import net.runelite.client.audio.AudioPlayer;
-import net.runelite.client.util.LinkBrowser;
+import net.runelite.client.util.Filepath;
 
 /**
- * Plays the player's own sound files on a win, the way other RuneLite plugins do custom sounds: a folder for the plugin
- * inside the .runelite directory, plain WAV files the player drops in under fixed names (one per kind of win, with
- * win.wav as the fallback for all of them), played with RuneLite's own AudioPlayer on RuneLite's executor, never the
- * client thread. Nothing is bundled, downloaded or deleted; folders inside the sound folder are left alone for spares.
+ * Plays the player's own sound files on a win. The files live in the plugin's own data folder (the Filepath RuneLite
+ * hands the plugin, which can't reach anywhere else) as plain WAVs under fixed names, one per kind of win with win.wav
+ * as the fallback for all of them. They are played with RuneLite's AudioPlayer on RuneLite's executor, never the client
+ * thread. Nothing is bundled, downloaded or deleted, and the plugin never opens the folder for the player: the how-to
+ * and a chat message give them its path.
  */
 @Slf4j
 @Singleton
 class CustomSound
 {
-	static final String FOLDER_NAME = "prediction-market-drops";
 	static final String FILE_NAME = SoundEvent.WIN.fileName();
 	static final String README_NAME = "HOW-TO.txt";
-	// A win sound is a second or two; this stops a huge file being read into memory by mistake.
+	// A win sound is a second or two; this stops a huge file being played by mistake.
 	private static final long MAX_BYTES = 8L * 1024 * 1024;
 
 	private static final String README_TITLE = "Prediction Market Drops - custom win sounds";
@@ -50,82 +48,84 @@ class CustomSound
 
 	private final ScheduledExecutorService executor;
 	private final AudioPlayer audioPlayer;
-	private final File folder;
+	// The plugin's data folder, handed over by the plugin when it starts; null until then (or if RuneLite couldn't make it).
+	private volatile Filepath folder;
 
 	@Inject
 	CustomSound(ScheduledExecutorService executor, AudioPlayer audioPlayer)
 	{
-		this(executor, audioPlayer, new File(RuneLite.RUNELITE_DIR, FOLDER_NAME));
-	}
-
-	CustomSound(ScheduledExecutorService executor, AudioPlayer audioPlayer, File folder)
-	{
 		this.executor = executor;
 		this.audioPlayer = audioPlayer;
+	}
+
+	void setFolder(Filepath folder)
+	{
 		this.folder = folder;
 	}
 
-	File folder()
+	/** Where the sound files go, for showing to the player; empty if the folder isn't available. */
+	String folderPath()
 	{
-		return folder;
+		Filepath current = folder;
+		return current == null ? "" : current.toString();
 	}
 
-	/** win.wav, the sound every win falls back to. */
-	File file()
+	/** win.wav, the sound every win falls back to; null if there is no folder. */
+	Filepath file()
 	{
-		return new File(folder, FILE_NAME);
+		Filepath current = folder;
+		return current == null ? null : current.joinSegment(FILE_NAME);
 	}
 
-	/** The file for this kind of win if the player made one, else win.wav (which may not exist). */
-	File fileFor(SoundEvent event)
+	/** The file for this kind of win if the player made one, else win.wav (which may not exist); null with no folder. */
+	Filepath fileFor(SoundEvent event)
 	{
+		Filepath current = folder;
+		if (current == null)
+		{
+			return null;
+		}
 		if (event != null && event != SoundEvent.WIN)
 		{
-			File specific = new File(folder, event.fileName());
+			Filepath specific = current.joinSegment(event.fileName());
 			if (specific.isFile())
 			{
 				return specific;
 			}
 		}
-		return file();
+		return current.joinSegment(FILE_NAME);
 	}
 
 	/** Makes sure the folder is there with the how-to in it, so the player has somewhere obvious to drop the files. */
 	void prepareFolder()
 	{
+		Filepath current = folder;
+		if (current == null)
+		{
+			return;
+		}
 		try
 		{
-			Files.createDirectories(folder.toPath());
-			File readme = new File(folder, README_NAME);
+			current.createDirectories();
+			Filepath readme = current.joinSegment(README_NAME);
 			boolean write = !readme.exists();
 			if (!write)
 			{
 				// An older copy of our own how-to is refreshed; one the player has edited or replaced is left alone.
-				String existing = new String(Files.readAllBytes(readme.toPath()), StandardCharsets.UTF_8);
-				write = existing.startsWith(README_TITLE) && !existing.equals(README);
+				try (InputStream in = readme.openInputStream())
+				{
+					String existing = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+					write = existing.startsWith(README_TITLE) && !existing.equals(README);
+				}
 			}
 			if (write)
 			{
-				Files.write(readme.toPath(), README.getBytes(StandardCharsets.UTF_8));
+				readme.write(README);
 			}
 		}
 		catch (IOException | RuntimeException e)
 		{
 			log.debug("Could not prepare the sound folder", e);
-		}
-	}
-
-	/** Opens the sound folder in the system's file browser, creating it first. Never throws. */
-	void openFolder()
-	{
-		prepareFolder();
-		try
-		{
-			LinkBrowser.open(folder.getAbsolutePath());
-		}
-		catch (Exception | LinkageError e)
-		{
-			log.debug("Could not open the sound folder", e);
 		}
 	}
 
@@ -157,11 +157,11 @@ class CustomSound
 		}
 	}
 
-	private void playNow(File file, int percent, Runnable onFailure)
+	private void playNow(Filepath file, int percent, Runnable onFailure)
 	{
 		try
 		{
-			if (!file.isFile() || file.length() > MAX_BYTES)
+			if (file == null || !file.isFile() || file.size() > MAX_BYTES)
 			{
 				fail(onFailure);
 				return;

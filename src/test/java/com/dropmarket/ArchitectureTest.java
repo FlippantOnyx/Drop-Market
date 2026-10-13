@@ -131,23 +131,40 @@ public class ArchitectureTest
 	}
 
 	/**
-	 * The hub rejects javax.sound ("use net.runelite.client.audio.AudioPlayer instead"), so audio goes through
-	 * RuneLite's player, and that and opening folders live in one guarded class, CustomSound.
+	 * The hub's reviewers reject several APIs: javax.sound ("use AudioPlayer"), LinkBrowser/Desktop opening (restricted),
+	 * and direct file I/O ("use Filepath"). None of them may appear, and audio and the plugin folder stay in CustomSound.
 	 */
 	@Test
-	public void audioAndFileBrowsingStayInCustomSound() throws Exception
+	public void restrictedApisAreNeverUsed() throws Exception
 	{
+		String[] banned = {"javax.sound", "LinkBrowser", "java.awt.Desktop", "Desktop.getDesktop", "java.io.File;",
+			"new File(", "java.io.FileInputStream", "java.io.FileOutputStream", "java.io.FileReader", "java.io.FileWriter",
+			"java.nio.file.Files", "java.nio.file.Paths", "RUNELITE_DIR", "PLUGINS_DIR"};
 		for (Path file : sources())
 		{
 			String name = file.getFileName().toString();
 			String text = read(name);
-			Assert.assertFalse(name + " uses javax.sound", text.contains("javax.sound"));
+			for (String bad : banned)
+			{
+				Assert.assertFalse(name + " uses " + bad, text.contains(bad));
+			}
 			if (!name.equals("CustomSound.java"))
 			{
-				Assert.assertFalse(name + " uses LinkBrowser", text.contains("LinkBrowser"));
 				Assert.assertFalse(name + " uses AudioPlayer", text.contains("AudioPlayer"));
+				Assert.assertFalse(name + " uses Filepath", text.contains("Filepath") && !name.equals("DropMarketPlugin.java"));
 			}
 		}
+	}
+
+	/** getPluginDirectory needs an internal name, and RuneLite only accepts certain characters in it. */
+	@Test
+	public void thePluginHasAnInternalNameRuneLiteAccepts() throws Exception
+	{
+		String internal = DropMarketPlugin.class.getAnnotation(net.runelite.client.plugins.PluginDescriptor.class).internalName();
+		Assert.assertFalse(internal.isEmpty());
+		java.lang.reflect.Method check = net.runelite.client.util.Filepath.class.getDeclaredMethod("checkName", String.class);
+		check.setAccessible(true);
+		check.invoke(null, internal);
 	}
 
 	/** Event handlers belong to the plugin, where each one is wrapped in the guard; no other class may subscribe. */

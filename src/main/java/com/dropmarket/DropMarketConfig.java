@@ -225,7 +225,8 @@ public interface DropMarketConfig extends Config
 		name = "Win Sound",
 		description = "A built-in game sound to play on a win.<br>"
 			+ "Custom file plays your own sound: choose it, tick Open Sound Folder, put a WAV file named win.wav in the<br>"
-			+ "folder that opens (a HOW-TO.txt is there too), then tick Test Win Sound to hear it.",
+			+ "folder that opens (a HOW-TO.txt is there too), then tick Test Win Sound to hear it.<br>"
+			+ "Optional: collection-log.wav and pet.wav give those wins their own sound; anything missing uses win.wav.",
 		section = SECTION_CELEBRATION,
 		position = 3
 	)

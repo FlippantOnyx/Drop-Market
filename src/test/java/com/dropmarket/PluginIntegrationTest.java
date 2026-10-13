@@ -183,6 +183,7 @@ public class PluginIntegrationTest
 	private static class StubCustomSound extends CustomSound
 	{
 		final List<Integer> plays = new ArrayList<>();
+		final List<SoundEvent> events = new ArrayList<>();
 		int opened;
 
 		StubCustomSound()
@@ -191,8 +192,9 @@ public class PluginIntegrationTest
 		}
 
 		@Override
-		void play(int percent, Runnable onFailure)
+		void play(SoundEvent event, int percent, Runnable onFailure)
 		{
+			events.add(event);
 			plays.add(percent);
 		}
 
@@ -685,6 +687,26 @@ public class PluginIntegrationTest
 		Rig rig = new Rig(Mode.NULL_CONFIG);
 		playSession(rig, 21);
 		System.out.println("null-config failures swallowed: " + rig.unexpectedFailures());
+		Assert.assertEquals(Collections.emptyList(), rig.unexpectedFailures());
+	}
+
+	/** A new collection log item uses collection-log.wav, an ordinary win uses win.wav, and each win resets the choice. */
+	@Test
+	public void eachKindOfWinAsksForItsOwnCustomSoundFile() throws Exception
+	{
+		Rig rig = new Rig(Mode.NORMAL, WinSound.CUSTOM);
+		rig.plugin.startUp();
+		rig.plugin.onChatMessage(new ChatMessage(null, ChatMessageType.GAMEMESSAGE, "",
+			"New item added to your collection log: Tanzanite fang", null, 1));
+		Assert.assertEquals(Collections.singletonList(SoundEvent.COLLECTION_LOG), rig.customSound.events);
+
+		// The test button is an ordinary win sound.
+		ConfigChanged test = new ConfigChanged();
+		test.setGroup(DropMarketConfig.GROUP);
+		test.setKey("testWinSound");
+		test.setNewValue("true");
+		rig.plugin.onConfigChanged(test);
+		Assert.assertEquals(SoundEvent.WIN, rig.customSound.events.get(1));
 		Assert.assertEquals(Collections.emptyList(), rig.unexpectedFailures());
 	}
 

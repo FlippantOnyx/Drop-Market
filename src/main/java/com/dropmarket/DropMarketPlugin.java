@@ -238,6 +238,8 @@ public class DropMarketPlugin extends Plugin
 	private WorldPoint fontPoint;
 	// The "couldn't play your custom sound" message is shown once until they pick Custom again.
 	private boolean customSoundWarned;
+	// Set just before a win that is a new collection log item, so it can use its own custom sound; reset after each win.
+	private SoundEvent soundHint = SoundEvent.WIN;
 	private final Map<Integer, Integer> lastInventory = new HashMap<>();
 
 	@Override
@@ -806,6 +808,7 @@ public class DropMarketPlugin extends Plugin
 				clog.recordAndFlush(item, true);
 				if (DropQualifier.collectionLogMessageQualifies(listStatusHere(item)))
 				{
+					soundHint = SoundEvent.COLLECTION_LOG;
 					celebrate(item);
 				}
 			}
@@ -872,6 +875,10 @@ public class DropMarketPlugin extends Plugin
 			|| msg.startsWith("new item added to your collection log")
 			|| mentionsLocalPlayer(msg))
 		{
+			if (msg.startsWith("new item added to your collection log"))
+			{
+				soundHint = SoundEvent.COLLECTION_LOG;
+			}
 			resolve();
 		}
 	}
@@ -892,7 +899,7 @@ public class DropMarketPlugin extends Plugin
 		if ("true".equals(event.getNewValue()) && "testWinSound".equals(event.getKey()))
 		{
 			profileStore.setSetting("testWinSound", "false");
-			playWinSound(config.winSound(), config.winSoundVolume());
+			playWinSound(config.winSound(), config.winSoundVolume(), SoundEvent.WIN);
 			return;
 		}
 		if ("true".equals(event.getNewValue()) && "openSoundFolder".equals(event.getKey()))
@@ -908,7 +915,8 @@ public class DropMarketPlugin extends Plugin
 			customSound.prepareFolder();
 			client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", "Prediction Market Drops: for a custom win sound put a WAV "
 				+ "file named " + CustomSound.FILE_NAME + " in " + customSound.folder().getAbsolutePath()
-				+ " (tick Open Sound Folder in the settings to open it).", null);
+				+ " (tick Open Sound Folder in the settings to open it; collection-log.wav and pet.wav are optional extras).",
+				null);
 			return;
 		}
 		priorities = DropTables.parsePriorities(config.priorityDrops());
@@ -1422,6 +1430,7 @@ public class DropMarketPlugin extends Plugin
 		boolean popOff = config.resolveWinOnEveryDrop();
 		String hitItem = null;
 		boolean hitOnTable = false;
+		boolean hitNewLog = false;
 		long hitPrice = Long.MIN_VALUE;
 		List<String> table = knownTable(marketSource);
 		for (ItemStack stack : items)
@@ -1458,6 +1467,7 @@ public class DropMarketPlugin extends Plugin
 			{
 				hitItem = name;
 				hitOnTable = onTable || isTarget;
+				hitNewLog = newLogItem;
 				hitPrice = price;
 			}
 		}
@@ -1468,6 +1478,10 @@ public class DropMarketPlugin extends Plugin
 		if (hitItem == null)
 		{
 			return;
+		}
+		if (hitNewLog)
+		{
+			soundHint = SoundEvent.COLLECTION_LOG;
 		}
 		if (popOff)
 		{
@@ -1524,7 +1538,7 @@ public class DropMarketPlugin extends Plugin
 	 * Plays the chosen win sound at its own volume. A sound with several notes (the bell) plays the first now and the
 	 * rest a beat apart on the client thread, so they ring in succession without ever blocking it.
 	 */
-	private void playWinSound(WinSound sound, int percent)
+	private void playWinSound(WinSound sound, int percent, SoundEvent event)
 	{
 		if (sound == null || sound == WinSound.OFF)
 		{
@@ -1533,7 +1547,7 @@ public class DropMarketPlugin extends Plugin
 		if (sound == WinSound.CUSTOM)
 		{
 			// The player's own file; if it can't be played the Grand Exchange chime stands in and they are told why.
-			customSound.play(percent, () -> clientThread.invoke(() -> guard.run("custom sound fallback", () ->
+			customSound.play(event, percent, () -> clientThread.invoke(() -> guard.run("custom sound fallback", () ->
 			{
 				if (!customSoundWarned)
 				{
@@ -1542,7 +1556,7 @@ public class DropMarketPlugin extends Plugin
 						+ CustomSound.FILE_NAME + ", so the Grand Exchange chime played instead. Put a WAV file with that name in "
 						+ customSound.folder().getAbsolutePath() + " (tick Open Sound Folder in the settings).", null);
 				}
-				playWinSound(WinSound.GE_CHIME, percent);
+				playWinSound(WinSound.GE_CHIME, percent, event);
 			})));
 			return;
 		}
@@ -1571,14 +1585,25 @@ public class DropMarketPlugin extends Plugin
 		}, true));
 	}
 
+	/** Which custom sound file this win uses: a pet, a new collection log item, or the ordinary win sound. */
+	private SoundEvent winSoundEvent()
+	{
+		if (marketItem != null && DropTables.isPet(marketItem))
+		{
+			return SoundEvent.PET;
+		}
+		return soundHint;
+	}
+
 	private void resolve()
 	{
 		// Loot events and chat messages for one drop can land on the same tick; make the noise once.
 		boolean alreadyCelebrating = resolved && resolvedTick == ticks;
 		if (!alreadyCelebrating)
 		{
-			playWinSound(config.winSound(), config.winSoundVolume());
+			playWinSound(config.winSound(), config.winSoundVolume(), winSoundEvent());
 		}
+		soundHint = SoundEvent.WIN;
 		if (!resolved)
 		{
 			// Frozen at the jump to 100% for the whole celebration. A second drop landing while it is still pinned at

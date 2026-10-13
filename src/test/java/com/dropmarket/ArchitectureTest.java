@@ -130,20 +130,23 @@ public class ArchitectureTest
 		}
 	}
 
-	/** The risky platform calls (audio, opening folders) live in one guarded class, CustomSound. */
+	/**
+	 * The hub rejects javax.sound ("use net.runelite.client.audio.AudioPlayer instead"), so audio goes through
+	 * RuneLite's player, and that and opening folders live in one guarded class, CustomSound.
+	 */
 	@Test
 	public void audioAndFileBrowsingStayInCustomSound() throws Exception
 	{
 		for (Path file : sources())
 		{
 			String name = file.getFileName().toString();
-			if (name.equals("CustomSound.java"))
-			{
-				continue;
-			}
 			String text = read(name);
 			Assert.assertFalse(name + " uses javax.sound", text.contains("javax.sound"));
-			Assert.assertFalse(name + " uses LinkBrowser", text.contains("LinkBrowser"));
+			if (!name.equals("CustomSound.java"))
+			{
+				Assert.assertFalse(name + " uses LinkBrowser", text.contains("LinkBrowser"));
+				Assert.assertFalse(name + " uses AudioPlayer", text.contains("AudioPlayer"));
+			}
 		}
 	}
 

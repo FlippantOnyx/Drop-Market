@@ -345,7 +345,6 @@ public class DropMarketPlugin extends Plugin
 	protected void shutDown()
 	{
 		guard.run("shutDown overlay", () -> overlayManager.remove(overlay));
-		guard.run("shutDown sound", customSound::stop);
 		resolved = false;
 		showingMarket = false;
 		marketSource = null;

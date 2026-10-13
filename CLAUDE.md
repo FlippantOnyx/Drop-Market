@@ -190,7 +190,7 @@ and the overlay threw an `IllegalAccessError` into the client every frame. The r
 own scale, via `playSoundEffect(id, volume)`). The default is `GE_CHIME`. The Grand Exchange trade jingle itself is music and
 cannot be played by a plugin, and Jagex's audio must not be bundled. `CUSTOM` plays the player's own WAV files from
 `.runelite/prediction-market-drops/` (`win.wav`, plus optional `collection-log.wav` and `pet.wav`, see `SoundEvent`; modelled on
-c-engineer-completed: fixed names, nothing deleted, subfolders ignored, sounds under 2s padded with silence for PipeWire) through `javax.sound` on RuneLite's injected executor (never the client thread), falling
+c-engineer-completed: fixed names, nothing deleted, subfolders ignored) through RuneLite's `AudioPlayer` (the hub rejects `javax.sound`) on RuneLite's injected executor (never the client thread), falling
 back to the chime. The two "button" settings (`testWinSound`, `openSoundFolder`) un-tick themselves in `handleConfigChanged`.
 
 ## Multi-part items and the Font of Consumption

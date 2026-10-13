@@ -188,7 +188,7 @@ public class PluginIntegrationTest
 
 		StubCustomSound()
 		{
-			super(null, new java.io.File("stub-sound-folder"));
+			super(null, null, new java.io.File("stub-sound-folder"));
 		}
 
 		@Override

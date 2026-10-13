@@ -397,6 +397,55 @@ public class MarketPainterTest
 		assertTrue("flat holds " + flat, flat > 5);
 	}
 
+	/** Odd sizes, titles and badges in every layout: drawing must never throw, whatever it is handed. */
+	@Test
+	public void paintingNeverThrowsForOddInputs() throws Exception
+	{
+		String[] titles = {null, "", " ", "A", "LIVE ODDS", "Zulrah drops Tanzanite fang", "X drops ", " drops Y", "drops",
+			"Bob GETS Scythe of vitur", "Supercalifragilisticexpialidocious Supercalifragilisticexpialidocious drops "
+			+ "Pneumonoultramicroscopicsilicovolcanoconiosis and then some more words after that so it really is long"};
+		String[] badges = {null, "", "17 KC", "A very long badge that cannot possibly fit anywhere"};
+		int[] widths = {0, 1, 5, 40, 120, 200, 400};
+		int[] heights = {0, 1, 20, 60, 192};
+		Random random = new Random(8);
+		for (OverlayLayout layout : OverlayLayout.values())
+		{
+			for (boolean second : new boolean[]{false, true})
+			{
+				TestConfig config = new TestConfig();
+				config.layout = layout;
+				config.showSecondLine = second;
+				config.showSecondNumber = random.nextBoolean();
+				config.showBothDeltas = random.nextBoolean();
+				config.showBar1 = random.nextBoolean();
+				config.showBar2 = random.nextBoolean();
+				for (String title : titles)
+				{
+					for (String badge : badges)
+					{
+						for (int w : widths)
+						{
+							for (int h : heights)
+							{
+								MarketGraph graph = new MarketGraph(new Random(random.nextInt()));
+								graph.reset();
+								MarketGraph poly = new MarketGraph(new Random(random.nextInt()));
+								poly.reset();
+								BufferedImage img = new BufferedImage(Math.max(1, w), Math.max(1, h), BufferedImage.TYPE_INT_ARGB);
+								Graphics2D g = img.createGraphics();
+								MarketPainter.paint(g, w, h, title, graph, poly, config, random.nextBoolean(), random.nextInt(500),
+									FontManager.getRunescapeBoldFont(), FontManager.getRunescapeSmallFont(), badge,
+									random.nextBoolean(), random.nextInt(3) * 1_000_000L, random.nextInt(21) - 10,
+									random.nextInt(21) - 10);
+								g.dispose();
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
 	@Test
 	public void bothDeltasCanBeTurnedOff() throws Exception
 	{

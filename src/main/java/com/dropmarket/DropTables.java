@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -478,8 +479,12 @@ final class DropTables
 	/** Lowercase, drop parentheticals like "(uncharged)" and punctuation, collapse whitespace. */
 	static String normalize(String s)
 	{
+		if (s == null)
+		{
+			return "";
+		}
 		return s.replace(' ', ' ')
-			.toLowerCase()
+			.toLowerCase(Locale.ROOT)
 			.replaceAll("\\(.*?\\)", " ")
 			.replaceAll("[-_]", " ")
 			.replaceAll("[^a-z0-9 ]", "")

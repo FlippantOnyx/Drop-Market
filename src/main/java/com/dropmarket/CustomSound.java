@@ -14,6 +14,7 @@ import javax.sound.sampled.FloatControl;
 import javax.sound.sampled.LineEvent;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.client.RuneLite;
+import net.runelite.client.util.LinkBrowser;
 
 /**
  * Plays the player's own sound file on a win, the way other RuneLite plugins do custom sounds: a folder for the plugin
@@ -88,6 +89,20 @@ class CustomSound
 		}
 	}
 
+	/** Opens the sound folder in the system's file browser, creating it first. Never throws. */
+	void openFolder()
+	{
+		prepareFolder();
+		try
+		{
+			LinkBrowser.open(folder.getAbsolutePath());
+		}
+		catch (Exception | LinkageError e)
+		{
+			log.debug("Could not open the sound folder", e);
+		}
+	}
+
 	/** Decibels of gain for a 0-100 volume: 100 is the file as it is, lower is quieter, 0 is silent. */
 	static float gainDb(int percent)
 	{
@@ -112,7 +127,7 @@ class CustomSound
 		catch (RuntimeException e)
 		{
 			log.debug("Could not start the custom sound", e);
-			onFailure.run();
+			fail(onFailure);
 		}
 	}
 
@@ -123,7 +138,7 @@ class CustomSound
 		{
 			if (!file.isFile() || file.length() > MAX_BYTES)
 			{
-				onFailure.run();
+				fail(onFailure);
 				return;
 			}
 			Clip clip = AudioSystem.getClip();
@@ -156,7 +171,19 @@ class CustomSound
 		catch (Exception | LinkageError e)
 		{
 			log.debug("Custom win sound failed", e);
+			fail(onFailure);
+		}
+	}
+
+	private void fail(Runnable onFailure)
+	{
+		try
+		{
 			onFailure.run();
+		}
+		catch (Exception | LinkageError e)
+		{
+			log.debug("Custom sound fallback failed", e);
 		}
 	}
 

@@ -59,7 +59,7 @@ public class PluginIntegrationTest
 {
 	private enum Mode
 	{
-		NORMAL, NULLS, THROWING
+		NORMAL, NULLS, THROWING, NULL_CONFIG
 	}
 
 	/** Creates an instance without running a constructor, for RuneLite classes that need a whole client to build. */
@@ -179,6 +179,35 @@ public class PluginIntegrationTest
 		}
 	}
 
+	/** Records what the plugin asks of the custom sound instead of touching the speakers or opening a window. */
+	private static class StubCustomSound extends CustomSound
+	{
+		final List<Integer> plays = new ArrayList<>();
+		int opened;
+
+		StubCustomSound()
+		{
+			super(null, new java.io.File("stub-sound-folder"));
+		}
+
+		@Override
+		void play(int percent, Runnable onFailure)
+		{
+			plays.add(percent);
+		}
+
+		@Override
+		void openFolder()
+		{
+			opened++;
+		}
+
+		@Override
+		void prepareFolder()
+		{
+		}
+	}
+
 	private static final String[] NAMES = {"Tanzanite fang", "Dragon bones", "Coins", "Scythe of vitur", "Emerald",
 		"Pet snakeling", "Abyssal whip", "Uncut diamond"};
 
@@ -287,10 +316,14 @@ public class PluginIntegrationTest
 
 	/** The real config, built the way RuneLite does it: a proxy of the interface that answers with the defaults. */
 	@SuppressWarnings("unchecked")
-	private static DropMarketConfig config(WinSound winSound)
+	private static DropMarketConfig config(WinSound winSound, boolean hostile)
 	{
 		InvocationHandler handler = (proxy, method, args) ->
 		{
+			if (hostile)
+			{
+				return defaultFor(method.getReturnType());
+			}
 			if (winSound != null && method.getName().equals("winSound"))
 			{
 				return winSound;
@@ -314,6 +347,7 @@ public class PluginIntegrationTest
 		final Guard guard;
 		final Client client;
 		final StubProfileStore store = new StubProfileStore();
+		final StubCustomSound customSound = new StubCustomSound();
 
 		final List<int[]> sounds = new ArrayList<>();
 
@@ -329,7 +363,7 @@ public class PluginIntegrationTest
 			ClientThread thread = allocate(StubClientThread.class);
 			ItemLookup items = new StubItemLookup(mode);
 			plugin = new DropMarketPlugin();
-			DropMarketConfig config = config(winSound);
+			DropMarketConfig config = config(winSound, mode == Mode.NULL_CONFIG);
 			Injector injector = Guice.createInjector(new AbstractModule()
 			{
 				@Override
@@ -344,6 +378,7 @@ public class PluginIntegrationTest
 					bind(DropMarketPlugin.class).toInstance(plugin);
 					bind(Gson.class).toInstance(new Gson());
 					bind(OkHttpClient.class).toInstance(new OkHttpClient());
+					bind(CustomSound.class).toInstance(customSound);
 					bind(java.util.concurrent.ScheduledExecutorService.class).toInstance(
 						java.util.concurrent.Executors.newSingleThreadScheduledExecutor(runnable ->
 						{
@@ -421,7 +456,9 @@ public class PluginIntegrationTest
 			case 6:
 				ConfigChanged changed = new ConfigChanged();
 				changed.setGroup(DropMarketConfig.GROUP);
-				changed.setKey(new String[]{"priorityDrops", "blacklistedDrops", "overlayLayout", "winSound"}[random.nextInt(4)]);
+				changed.setKey(new String[]{"priorityDrops", "blacklistedDrops", "overlayLayout", "winSound", "testWinSound",
+					"openSoundFolder", "valueUnit", null}[random.nextInt(8)]);
+				changed.setNewValue(new String[]{"true", "false", "CUSTOM", null, "garbage"}[random.nextInt(5)]);
 				plugin.onConfigChanged(changed);
 				break;
 			case 7:
@@ -639,6 +676,45 @@ public class PluginIntegrationTest
 		off.plugin.onChatMessage(new ChatMessage(null, ChatMessageType.GAMEMESSAGE, "",
 			"New item added to your collection log: Tanzanite fang", null, 1));
 		Assert.assertEquals(0, off.sounds.size());
+	}
+
+	/** Every enum, colour and text setting comes back null (never happens in RuneLite, but nothing may escape or fail). */
+	@Test
+	public void aConfigThatAnswersNullDoesNotBreakAnything() throws Exception
+	{
+		Rig rig = new Rig(Mode.NULL_CONFIG);
+		playSession(rig, 21);
+		System.out.println("null-config failures swallowed: " + rig.unexpectedFailures());
+		Assert.assertEquals(Collections.emptyList(), rig.unexpectedFailures());
+	}
+
+	@Test
+	public void settingButtonsDoTheirJobAndUntickThemselves() throws Exception
+	{
+		Rig rig = new Rig(Mode.NORMAL, WinSound.CUSTOM);
+		rig.plugin.startUp();
+
+		ConfigChanged test = new ConfigChanged();
+		test.setGroup(DropMarketConfig.GROUP);
+		test.setKey("testWinSound");
+		test.setNewValue("true");
+		rig.plugin.onConfigChanged(test);
+		Assert.assertEquals(Collections.singletonList(100), rig.customSound.plays);
+		Assert.assertEquals("false", rig.store.settings.get("testWinSound"));
+
+		ConfigChanged open = new ConfigChanged();
+		open.setGroup(DropMarketConfig.GROUP);
+		open.setKey("openSoundFolder");
+		open.setNewValue("true");
+		rig.plugin.onConfigChanged(open);
+		Assert.assertEquals(1, rig.customSound.opened);
+		Assert.assertEquals("false", rig.store.settings.get("openSoundFolder"));
+
+		// Un-ticking (the plugin's own reset, or the player) does nothing.
+		open.setNewValue("false");
+		rig.plugin.onConfigChanged(open);
+		Assert.assertEquals(1, rig.customSound.opened);
+		Assert.assertEquals(Collections.emptyList(), rig.unexpectedFailures());
 	}
 
 	@Test

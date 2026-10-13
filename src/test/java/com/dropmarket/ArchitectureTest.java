@@ -103,6 +103,73 @@ public class ArchitectureTest
 		}
 	}
 
+	/** Case changes and number formatting must not depend on the player's language (Turkish "i", decimal commas). */
+	@Test
+	public void noLocaleDependentStringCalls() throws Exception
+	{
+		for (Path file : sources())
+		{
+			String text = read(file.getFileName().toString());
+			Assert.assertFalse(file.getFileName() + " uses toUpperCase() without Locale", text.contains(".toUpperCase()"));
+			Assert.assertFalse(file.getFileName() + " uses toLowerCase() without Locale", text.contains(".toLowerCase()"));
+			Assert.assertFalse(file.getFileName() + " uses String.format without Locale", text.contains("String.format(\""));
+		}
+	}
+
+	/** Logging goes through slf4j, never stdout or stack traces printed straight to the console. */
+	@Test
+	public void noConsoleOutput() throws Exception
+	{
+		for (Path file : sources())
+		{
+			String text = read(file.getFileName().toString());
+			for (String bad : new String[]{"System.out", "System.err", ".printStackTrace("})
+			{
+				Assert.assertFalse(file.getFileName() + " contains " + bad, text.contains(bad));
+			}
+		}
+	}
+
+	/** The risky platform calls (audio, opening folders) live in one guarded class, CustomSound. */
+	@Test
+	public void audioAndFileBrowsingStayInCustomSound() throws Exception
+	{
+		for (Path file : sources())
+		{
+			String name = file.getFileName().toString();
+			if (name.equals("CustomSound.java"))
+			{
+				continue;
+			}
+			String text = read(name);
+			Assert.assertFalse(name + " uses javax.sound", text.contains("javax.sound"));
+			Assert.assertFalse(name + " uses LinkBrowser", text.contains("LinkBrowser"));
+		}
+	}
+
+	/** Event handlers belong to the plugin, where each one is wrapped in the guard; no other class may subscribe. */
+	@Test
+	public void onlyThePluginSubscribesToEvents() throws Exception
+	{
+		for (Path file : sources())
+		{
+			String name = file.getFileName().toString();
+			if (!name.equals("DropMarketPlugin.java"))
+			{
+				Assert.assertFalse(name + " has an @Subscribe handler", read(name).contains("@Subscribe"));
+			}
+		}
+	}
+
+	/** Failures from the background audio thread and the client thread callbacks must be caught where they happen. */
+	@Test
+	public void customSoundCatchesItsOwnFailures() throws Exception
+	{
+		String text = read("CustomSound.java");
+		Assert.assertTrue(text.contains("catch (Exception | LinkageError e)"));
+		Assert.assertTrue("fallback callbacks are wrapped", text.contains("private void fail(Runnable onFailure)"));
+	}
+
 	/** No threads, executors, blocking waits or system exits: everything runs on RuneLite's own threads. */
 	@Test
 	public void noThreadsOrBlockingCalls() throws Exception

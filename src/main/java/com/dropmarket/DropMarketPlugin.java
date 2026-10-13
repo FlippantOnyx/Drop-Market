@@ -10,6 +10,7 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -56,7 +57,6 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.plugins.loottracker.LootReceived;
 import net.runelite.client.ui.overlay.OverlayManager;
-import net.runelite.client.util.LinkBrowser;
 import net.runelite.client.util.Text;
 import net.runelite.http.api.item.ItemPrice;
 
@@ -630,7 +630,7 @@ public class DropMarketPlugin extends Plugin
 			return;
 		}
 		String option = event.getMenuOption();
-		String target = event.getMenuTarget() == null ? "" : Text.removeTags(event.getMenuTarget()).toLowerCase();
+		String target = event.getMenuTarget() == null ? "" : Text.removeTags(event.getMenuTarget()).toLowerCase(Locale.ROOT);
 		boolean readsClue = "Read".equals(option) && (target.contains("clue scroll") || target.contains("challenge scroll"));
 		boolean opensCasket = "Open".equals(option) && target.contains("casket");
 		if (readsClue || opensCasket || "Dig".equals(option))
@@ -898,8 +898,7 @@ public class DropMarketPlugin extends Plugin
 		if ("true".equals(event.getNewValue()) && "openSoundFolder".equals(event.getKey()))
 		{
 			profileStore.setSetting("openSoundFolder", "false");
-			customSound.prepareFolder();
-			LinkBrowser.open(customSound.folder().getAbsolutePath());
+			customSound.openFolder();
 			return;
 		}
 		if ("winSound".equals(event.getKey()) && WinSound.CUSTOM.name().equals(event.getNewValue()))
@@ -1375,7 +1374,7 @@ public class DropMarketPlugin extends Plugin
 
 	private long gePriceOf(String name)
 	{
-		String key = name.toLowerCase();
+		String key = name.toLowerCase(Locale.ROOT);
 		Long cached = priceCache.get(key);
 		if (cached != null)
 		{
@@ -1527,6 +1526,10 @@ public class DropMarketPlugin extends Plugin
 	 */
 	private void playWinSound(WinSound sound, int percent)
 	{
+		if (sound == null || sound == WinSound.OFF)
+		{
+			return;
+		}
 		if (sound == WinSound.CUSTOM)
 		{
 			// The player's own file; if it can't be played the Grand Exchange chime stands in and they are told why.
@@ -1731,8 +1734,8 @@ public class DropMarketPlugin extends Plugin
 		int hours = totalSeconds / 3600;
 		int minutes = (totalSeconds % 3600) / 60;
 		int seconds = totalSeconds % 60;
-		return hours > 0 ? String.format("%d:%02d:%02d", hours, minutes, seconds)
-			: String.format("%d:%02d", minutes, seconds);
+		return hours > 0 ? String.format(Locale.US, "%d:%02d:%02d", hours, minutes, seconds)
+			: String.format(Locale.US, "%d:%02d", minutes, seconds);
 	}
 
 	@Provides

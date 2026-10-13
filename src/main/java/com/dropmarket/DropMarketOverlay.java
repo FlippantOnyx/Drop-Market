@@ -51,7 +51,7 @@ class DropMarketOverlay extends Overlay
 		Dimension preferred = getPreferredSize() != null ? getPreferredSize() : DEFAULT_SIZE;
 		// Compact and Ticker keep the width the player chose but have a fixed height.
 		int layoutHeight = MarketPainter.layoutHeight(config);
-		if (config.overlayLayout() == OverlayLayout.COMPACT && layoutHeight > 0)
+		if (MarketPainter.layout(config) == OverlayLayout.COMPACT && layoutHeight > 0)
 		{
 			// A long title takes a second line, so the card grows to hold it.
 			Font titleFont = FontManager.getRunescapeBoldFont();
@@ -59,7 +59,7 @@ class DropMarketOverlay extends Overlay
 				graphics.getFontMetrics(titleFont), graphics.getFontMetrics(FontManager.getRunescapeSmallFont()));
 		}
 		boolean untouched = preferred.equals(DEFAULT_SIZE);
-		int width = config.overlayLayout() == OverlayLayout.TICKER && untouched ? TICKER_DEFAULT_WIDTH : preferred.width;
+		int width = MarketPainter.layout(config) == OverlayLayout.TICKER && untouched ? TICKER_DEFAULT_WIDTH : preferred.width;
 		Dimension size = layoutHeight < 0 ? preferred : new Dimension(width, layoutHeight);
 		MarketPainter.paint(graphics, size.width, size.height, plugin.getTitle(), plugin.getGraph(),
 			plugin.getPolyGraph(), config, plugin.isResolved(), plugin.getTicks(),

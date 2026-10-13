@@ -173,6 +173,14 @@ and the overlay threw an `IllegalAccessError` into the client every frame. The r
   state and throwing state. In the normal run `Guard.failures()` must stay empty. Add new event types there.
 - `ArchitectureTest` also bans threads, sleeps, `new Gson()`, mutable statics and direct `ItemManager`/`ConfigManager` use.
   The build runs `-Xlint:removal -Werror`, so API scheduled for removal fails here before it fails the hub's build.
+- **Settings can be null in tests, so read them through fallbacks**: `MarketPainter.layout(config)` and `color(...)` give a
+  default when an enum or colour comes back null; `ValueUnit.toGp` and `playWinSound` accept a null unit/sound. The
+  `NULL_CONFIG` run in `PluginIntegrationTest` answers null for every object setting and must stay clean, and
+  `paintingNeverThrowsForOddInputs` hands the painter odd sizes, titles and badges in every layout.
+- **Java conventions enforced by `ArchitectureTest`**: no locale-dependent `toUpperCase()`/`toLowerCase()`/`String.format`
+  (use `Locale.ROOT`/`Locale.US`; `LocaleTest` runs the matching under Turkish and German locales), no `System.out`/
+  `printStackTrace`, `@Subscribe` only in the plugin, and the audio and folder-opening calls only in `CustomSound`,
+  which catches its own failures (including from its background thread) and falls back to the chime.
 - The overlay manager can't be stubbed either, so the integration test tolerates the two overlay register/unregister
   failures and nothing else.
 

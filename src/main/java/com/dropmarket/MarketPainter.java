@@ -14,6 +14,7 @@ import java.awt.geom.Path2D;
 import java.awt.geom.RoundRectangle2D;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.function.ToIntFunction;
 
 final class MarketPainter
@@ -57,18 +58,32 @@ final class MarketPainter
 	{
 	}
 
+	/** The configured layout, or Full if the setting somehow has none. */
+	static OverlayLayout layout(DropMarketConfig config)
+	{
+		OverlayLayout layout = config.overlayLayout();
+		return layout == null ? OverlayLayout.FULL : layout;
+	}
+
+	/** The configured colour, or the default if the setting somehow has none. */
+	private static Color color(Color configured, Color fallback)
+	{
+		return configured == null ? fallback : configured;
+	}
+
 	static void paint(Graphics2D graphics, int w, int h, String title, MarketGraph graph, MarketGraph polyGraph,
 		DropMarketConfig config, boolean resolved, long nowTick, Font titleFont, Font smallFont, String badge,
 		boolean badgeSkull, long volumePop, int delta1, int delta2)
 	{
+		title = title == null ? "" : title;
 		Graphics2D g = (Graphics2D) graphics.create();
 		try
 		{
 			boolean flashOn = resolved && config.flashOnWin() && (nowTick / FLASH_PERIOD_TICKS) % 2 == 0;
-			Color lineColor = config.line1Color();
+			Color lineColor = color(config.line1Color(), DropMarketConfig.DEFAULT_LINE_COLOR);
 			Color accent = flashOn ? RAID_PURPLE : lineColor;
 			MarketGraph secondLine = config.showSecondLine() ? polyGraph : null;
-			Color accent2 = flashOn ? RAID_PURPLE : config.line2Color();
+			Color accent2 = flashOn ? RAID_PURPLE : color(config.line2Color(), DropMarketConfig.DEFAULT_LINE2_COLOR);
 
 			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 			RoundRectangle2D panel = new RoundRectangle2D.Double(0, 0, w - 1, h - 1, 8, 8);
@@ -80,26 +95,26 @@ final class MarketPainter
 				g.fill(panel);
 			}
 
-			OverlayLayout layout = config.overlayLayout();
+			OverlayLayout layout = layout(config);
 			boolean bars = layout != OverlayLayout.TICKER;
 			int y = 0;
 			if (bars && config.showBar1())
 			{
-				g.setColor(config.bar1Color());
+				g.setColor(color(config.bar1Color(), DropMarketConfig.DEFAULT_BAR1_COLOR));
 				g.fillRect(0, y, w, BRAND_BAR_H);
 				if (config.bar1Text() != null && !config.bar1Text().isEmpty())
 				{
-					drawBarText(g, config.bar1Text(), w, y, BRAND_BAR_H, config.bar1TextColor());
+					drawBarText(g, config.bar1Text(), w, y, BRAND_BAR_H, color(config.bar1TextColor(), Color.BLACK));
 				}
 				y += BRAND_BAR_H;
 			}
 			if (bars && config.showBar2())
 			{
-				g.setColor(config.bar2Color());
+				g.setColor(color(config.bar2Color(), DropMarketConfig.DEFAULT_BAR2_COLOR));
 				g.fillRect(0, y, w, BRAND_BAR_H);
 				if (config.bar2Text() != null && !config.bar2Text().isEmpty())
 				{
-					drawBarText(g, config.bar2Text(), w, y, BRAND_BAR_H, config.bar2TextColor());
+					drawBarText(g, config.bar2Text(), w, y, BRAND_BAR_H, color(config.bar2TextColor(), Color.WHITE));
 				}
 				y += BRAND_BAR_H;
 			}
@@ -226,7 +241,7 @@ final class MarketPainter
 	/** Height of the overlay for a layout; Full keeps whatever size the player resized it to (returns -1). */
 	static int layoutHeight(DropMarketConfig config)
 	{
-		switch (config.overlayLayout())
+		switch (layout(config))
 		{
 			case COMPACT:
 				return (config.showBar1() ? BRAND_BAR_H : 0) + (config.showBar2() ? BRAND_BAR_H : 0) + COMPACT_BODY_H;
@@ -336,7 +351,7 @@ final class MarketPainter
 		g.setFont(titleFont);
 		text(g, pct1, x, baseline, accent);
 		x += titleFm.stringWidth(pct1) + 6;
-		x += drawDelta(g, x, baseline, delta1, accent, config.line1FallingColor(), smallFont);
+		x += drawDelta(g, x, baseline, delta1, accent, color(config.line1FallingColor(), DropMarketConfig.DEFAULT_NEGATIVE_DELTA_COLOR), smallFont);
 		if (group2W > 0)
 		{
 			x += groupGap;
@@ -348,7 +363,7 @@ final class MarketPainter
 			}
 			if (secondDelta)
 			{
-				drawDelta(g, x, baseline, delta2, accent2, config.line2FallingColor(), smallFont);
+				drawDelta(g, x, baseline, delta2, accent2, color(config.line2FallingColor(), DropMarketConfig.DEFAULT_NEGATIVE_DELTA_COLOR), smallFont);
 			}
 		}
 		Font tickerTitleFont = smallFont.deriveFont(Font.BOLD);
@@ -393,7 +408,8 @@ final class MarketPainter
 	 */
 	static List<String> compactLines(String title, ToIntFunction<String> width, int firstMax, int restMax)
 	{
-		String upper = title.toUpperCase();
+		title = title == null ? "" : title;
+		String upper = title.toUpperCase(Locale.ROOT);
 		for (String candidate : new String[]{upper, shortTitle(title, false), shortTitle(title, true)})
 		{
 			List<String> lines = wrap(candidate, width, firstMax, restMax, Integer.MAX_VALUE);
@@ -413,7 +429,8 @@ final class MarketPainter
 	/** The title with the source's wiki short name and, if asked, the item's short name. Upper-cased. */
 	static String shortTitle(String title, boolean shortItem)
 	{
-		String upper = title.toUpperCase();
+		title = title == null ? "" : title;
+		String upper = title.toUpperCase(Locale.ROOT);
 		String verb = upper.contains(" DROPS ") ? " DROPS " : upper.contains(" GETS ") ? " GETS " : null;
 		if (verb == null)
 		{
@@ -421,8 +438,8 @@ final class MarketPainter
 		}
 		int at = upper.indexOf(verb);
 		String item = title.substring(at + verb.length());
-		return (DropTables.abbreviation(title.substring(0, at)) + verb.toLowerCase()
-			+ (shortItem ? DropTables.itemAbbreviation(item) : item)).toUpperCase();
+		return (DropTables.abbreviation(title.substring(0, at)) + verb.toLowerCase(Locale.ROOT)
+			+ (shortItem ? DropTables.itemAbbreviation(item) : item)).toUpperCase(Locale.ROOT);
 	}
 
 	/**
@@ -431,7 +448,8 @@ final class MarketPainter
 	 */
 	static List<String> titleLines(String title, FontMetrics fm, int maxWidth)
 	{
-		for (String candidate : new String[]{title.toUpperCase(), abbreviatedTitle(title)})
+		title = title == null ? "" : title;
+		for (String candidate : new String[]{title.toUpperCase(Locale.ROOT), abbreviatedTitle(title)})
 		{
 			List<String> lines = wrap(candidate, fm, maxWidth, Integer.MAX_VALUE);
 			boolean fits = lines.size() <= 2;
@@ -450,14 +468,15 @@ final class MarketPainter
 	/** Source swapped for its wiki short name (ToB, CoX...), everything else untouched, upper-cased. */
 	static String abbreviatedTitle(String title)
 	{
-		String upper = title.toUpperCase();
+		title = title == null ? "" : title;
+		String upper = title.toUpperCase(Locale.ROOT);
 		String verb = upper.contains(" DROPS ") ? " DROPS " : upper.contains(" GETS ") ? " GETS " : null;
 		if (verb == null)
 		{
 			return upper;
 		}
 		int at = upper.indexOf(verb);
-		return DropTables.abbreviation(title.substring(0, at)).toUpperCase() + upper.substring(at);
+		return DropTables.abbreviation(title.substring(0, at)).toUpperCase(Locale.ROOT) + upper.substring(at);
 	}
 
 	/** Scrolls text right to left inside [left, right], looping like a stock ticker; one step per game tick. */
@@ -512,7 +531,7 @@ final class MarketPainter
 			g.setFont(bigFont);
 			text(g, pct1, x, baseline, accent);
 			x += pct1W + changeGap;
-			x += drawDelta(g, x, deltaBase, delta1, accent, config.line1FallingColor(), smallFont);
+			x += drawDelta(g, x, deltaBase, delta1, accent, color(config.line1FallingColor(), DropMarketConfig.DEFAULT_NEGATIVE_DELTA_COLOR), smallFont);
 			// Line 2's readout hugs the right edge in Full; Compact keeps that side for its sparkline.
 			x = full ? limit - (pct2W + tail2) : x + groupGap;
 			g.setFont(bigFont);
@@ -523,21 +542,21 @@ final class MarketPainter
 				return x;
 			}
 			x += changeGap;
-			return x + drawDelta(g, x, deltaBase, delta2, accent2, config.line2FallingColor(), smallFont);
+			return x + drawDelta(g, x, deltaBase, delta2, accent2, color(config.line2FallingColor(), DropMarketConfig.DEFAULT_NEGATIVE_DELTA_COLOR), smallFont);
 		}
 
 		int x = startX;
 		g.setFont(bigFont);
 		text(g, pct1, x, baseline, accent);
 		x += pct1W + changeGap;
-		x += drawDelta(g, x, deltaBase, delta1, accent, config.line1FallingColor(), smallFont);
+		x += drawDelta(g, x, deltaBase, delta1, accent, color(config.line1FallingColor(), DropMarketConfig.DEFAULT_NEGATIVE_DELTA_COLOR), smallFont);
 		if (!delta2On)
 		{
 			return x;
 		}
 		// No second number: line 2's change simply follows line 1's.
 		x += PAIR_GAP;
-		return x + drawDelta(g, x, deltaBase, delta2, accent2, config.line2FallingColor(), smallFont);
+		return x + drawDelta(g, x, deltaBase, delta2, accent2, color(config.line2FallingColor(), DropMarketConfig.DEFAULT_NEGATIVE_DELTA_COLOR), smallFont);
 	}
 
 	/** Always renders (the delta should never disappear); the arrow is skipped only for an exact 0. */
@@ -723,26 +742,26 @@ final class MarketPainter
 	{
 		if (v >= 1_000_000_000L)
 		{
-			return String.format("$%.1fB", v / 1e9);
+			return String.format(Locale.US, "$%.1fB", v / 1e9);
 		}
 		if (v >= 1_000_000L)
 		{
-			return String.format("$%.1fM", v / 1e6);
+			return String.format(Locale.US, "$%.1fM", v / 1e6);
 		}
-		return String.format("$%dK", v / 1000);
+		return String.format(Locale.US, "$%dK", v / 1000);
 	}
 
 	static String formatVolume(long v)
 	{
 		if (v >= 1_000_000_000L)
 		{
-			return String.format("$%.1fB Vol.", v / 1e9);
+			return String.format(Locale.US, "$%.1fB Vol.", v / 1e9);
 		}
 		if (v >= 1_000_000L)
 		{
-			return String.format("$%.1fM Vol.", v / 1e6);
+			return String.format(Locale.US, "$%.1fM Vol.", v / 1e6);
 		}
-		return String.format("$%,dK Vol.", v / 1000);
+		return String.format(Locale.US, "$%,dK Vol.", v / 1000);
 	}
 
 	static List<String> wrap(String text, FontMetrics fm, int maxWidth, int maxLines)
